@@ -1,0 +1,218 @@
+<mvc:View
+    controllerName="admin.controller.Main"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    height="100%">
+    
+    <Page title="System Administration" showNavButton="true" navButtonPress=".onNavBack">
+        <content>
+            <IconTabBar id="iconTabBar" select=".onTabSelect">
+                
+                <!-- Courses Tab -->
+                <items>
+                    <IconTabFilter text="Courses" key="courses">
+                        <VBox class="sapUiSmallMargin">
+                            <HBox justifyContent="SpaceBetween" class="sapUiSmallMarginBottom">
+                                <Title text="All Courses" level="H2"/>
+                                <Button 
+                                    text="Create Course" 
+                                    type="Emphasized"
+                                    press=".onCreateCourse"/>
+                            </HBox>
+                            
+                            <Table
+                                id="courseTable"
+                                items="{
+                                    path: '/Courses',
+                                    parameters: {
+                                        $expand: 'instructor,department'
+                                    }
+                                }">
+                                <columns>
+                                    <Column width="10%">
+                                        <Text text="Code"/>
+                                    </Column>
+                                    <Column width="20%">
+                                        <Text text="Course Name"/>
+                                    </Column>
+                                    <Column width="8%">
+                                        <Text text="ECTS"/>
+                                    </Column>
+                                    <Column width="15%">
+                                        <Text text="Instructor"/>
+                                    </Column>
+                                    <Column width="12%">
+                                        <Text text="Department"/>
+                                    </Column>
+                                    <Column width="12%">
+                                        <Text text="Semester"/>
+                                    </Column>
+                                    <Column width="8%">
+                                        <Text text="Quota"/>
+                                    </Column>
+                                    <Column width="8%">
+                                        <Text text="Status"/>
+                                    </Column>
+                                    <Column width="7%">
+                                        <Text text="Actions"/>
+                                    </Column>
+                                </columns>
+                                <items>
+                                    <ColumnListItem>
+                                        <cells>
+                                            <Text text="{courseCode}"/>
+                                            <Text text="{courseName}"/>
+                                            <Text text="{ects}"/>
+                                            <Text text="{instructor/firstName} {instructor/lastName}"/>
+                                            <Text text="{department/departmentName}"/>
+                                            <Text text="{semester}"/>
+                                            <Text text="{enrolled}/{quota}"/>
+                                            <ObjectStatus 
+                                                text="{= ${isActive} ? 'Active' : 'Inactive'}"
+                                                state="{= ${isActive} ? 'Success' : 'Error'}"/>
+                                            <HBox>
+                                                <Button 
+                                                    icon="sap-icon://edit" 
+                                                    type="Transparent"
+                                                    press=".onEditCourse"/>
+                                                <Button 
+                                                    icon="sap-icon://delete" 
+                                                    type="Transparent"
+                                                    press=".onDeleteCourse"/>
+                                            </HBox>
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+                        </VBox>
+                    </IconTabFilter>
+                    
+                    <!-- Students Tab -->
+                    <IconTabFilter text="Students" key="students">
+                        <VBox class="sapUiSmallMargin">
+                            <HBox justifyContent="SpaceBetween" class="sapUiSmallMarginBottom">
+                                <Title text="All Students" level="H2"/>
+                                <Button 
+                                    text="Create Student" 
+                                    type="Emphasized"
+                                    press=".onCreateStudent"/>
+                            </HBox>
+                            
+                            <Table
+                                id="studentTable"
+                                items="{
+                                    path: '/Students',
+                                    parameters: {
+                                        $expand: 'department'
+                                    }
+                                }">
+                                <columns>
+                                    <Column width="15%">
+                                        <Text text="Student Number"/>
+                                    </Column>
+                                    <Column width="20%">
+                                        <Text text="Name"/>
+                                    </Column>
+                                    <Column width="25%">
+                                        <Text text="Email"/>
+                                    </Column>
+                                    <Column width="20%">
+                                        <Text text="Department"/>
+                                    </Column>
+                                    <Column width="10%">
+                                        <Text text="ECTS Limit"/>
+                                    </Column>
+                                    <Column width="10%">
+                                        <Text text="Actions"/>
+                                    </Column>
+                                </columns>
+                                <items>
+                                    <ColumnListItem>
+                                        <cells>
+                                            <Text text="{studentNumber}"/>
+                                            <Text text="{firstName} {lastName}"/>
+                                            <Text text="{email}"/>
+                                            <Text text="{department/departmentName}"/>
+                                            <Text text="{ectsLimit}"/>
+                                            <HBox>
+                                                <Button 
+                                                    icon="sap-icon://edit" 
+                                                    type="Transparent"
+                                                    press=".onEditStudent"/>
+                                                <Button 
+                                                    icon="sap-icon://delete" 
+                                                    type="Transparent"
+                                                    press=".onDeleteStudent"/>
+                                            </HBox>
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+                        </VBox>
+                    </IconTabFilter>
+                    
+                    <!-- Instructors Tab -->
+                    <IconTabFilter text="Instructors" key="instructors">
+                        <VBox class="sapUiSmallMargin">
+                            <HBox justifyContent="SpaceBetween" class="sapUiSmallMarginBottom">
+                                <Title text="All Instructors" level="H2"/>
+                                <Button 
+                                    text="Create Instructor" 
+                                    type="Emphasized"
+                                    press=".onCreateInstructor"/>
+                            </HBox>
+                            
+                            <Table
+                                id="instructorTable"
+                                items="{
+                                    path: '/Instructors',
+                                    parameters: {
+                                        $expand: 'department'
+                                    }
+                                }">
+                                <columns>
+                                    <Column width="15%">
+                                        <Text text="Instructor ID"/>
+                                    </Column>
+                                    <Column width="25%">
+                                        <Text text="Name"/>
+                                    </Column>
+                                    <Column width="30%">
+                                        <Text text="Email"/>
+                                    </Column>
+                                    <Column width="20%">
+                                        <Text text="Department"/>
+                                    </Column>
+                                    <Column width="10%">
+                                        <Text text="Actions"/>
+                                    </Column>
+                                </columns>
+                                <items>
+                                    <ColumnListItem>
+                                        <cells>
+                                            <Text text="{instructorId}"/>
+                                            <Text text="{firstName} {lastName}"/>
+                                            <Text text="{email}"/>
+                                            <Text text="{department/departmentName}"/>
+                                            <HBox>
+                                                <Button 
+                                                    icon="sap-icon://edit" 
+                                                    type="Transparent"
+                                                    press=".onEditInstructor"/>
+                                                <Button 
+                                                    icon="sap-icon://delete" 
+                                                    type="Transparent"
+                                                    press=".onDeleteInstructor"/>
+                                            </HBox>
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+                        </VBox>
+                    </IconTabFilter>
+                </items>
+            </IconTabBar>
+        </content>
+    </Page>
+</mvc:View>

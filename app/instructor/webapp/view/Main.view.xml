@@ -1,0 +1,115 @@
+<mvc:View
+    controllerName="instructor.controller.Main"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    height="100%">
+    
+    <Page title="Course Management" showNavButton="true" navButtonPress=".onNavBack">
+        <content>
+            <IconTabBar id="iconTabBar" select=".onTabSelect">
+                
+                <!-- My Courses Tab -->
+                <items>
+                    <IconTabFilter text="My Courses" key="courses">
+                        <VBox class="sapUiSmallMargin">
+                            <Title text="Courses I Teach" level="H2" class="sapUiSmallMarginBottom"/>
+                            
+                            <Table
+                                id="courseTable"
+                                items="{/MyCourses}">
+                                <columns>
+                                    <Column width="12%">
+                                        <Text text="Code"/>
+                                    </Column>
+                                    <Column width="30%">
+                                        <Text text="Course Name"/>
+                                    </Column>
+                                    <Column width="10%">
+                                        <Text text="ECTS"/>
+                                    </Column>
+                                    <Column width="15%">
+                                        <Text text="Semester"/>
+                                    </Column>
+                                    <Column width="13%">
+                                        <Text text="Quota"/>
+                                    </Column>
+                                    <Column width="10%">
+                                        <Text text="Status"/>
+                                    </Column>
+                                </columns>
+                                <items>
+                                    <ColumnListItem>
+                                        <cells>
+                                            <Text text="{courseCode}"/>
+                                            <Text text="{courseName}"/>
+                                            <Text text="{ects}"/>
+                                            <Text text="{semester}"/>
+                                            <Text text="{enrolled}/{quota}"/>
+                                            <ObjectStatus 
+                                                text="{= ${isActive} ? 'Active' : 'Inactive'}"
+                                                state="{= ${isActive} ? 'Success' : 'Error'}"/>
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+                        </VBox>
+                    </IconTabFilter>
+                    
+                    <!-- Enrollments Tab -->
+                    <IconTabFilter text="Enrollments" key="enrollments">
+                        <VBox class="sapUiSmallMargin">
+                            <Title text="Student Enrollments" level="H2" class="sapUiSmallMarginBottom"/>
+                            
+                            <Table
+                                id="enrollmentTable"
+                                items="{/CourseEnrollments}">
+                                <columns>
+                                    <Column width="15%">
+                                        <Text text="Student Number"/>
+                                    </Column>
+                                    <Column width="20%">
+                                        <Text text="Student Name"/>
+                                    </Column>
+                                    <Column width="15%">
+                                        <Text text="Course Code"/>
+                                    </Column>
+                                    <Column width="20%">
+                                        <Text text="Course Name"/>
+                                    </Column>
+                                    <Column width="10%">
+                                        <Text text="Status"/>
+                                    </Column>
+                                    <Column width="10%">
+                                        <Text text="Grade"/>
+                                    </Column>
+                                    <Column width="10%">
+                                        <Text text="Actions"/>
+                                    </Column>
+                                </columns>
+                                <items>
+                                    <ColumnListItem>
+                                        <cells>
+                                            <Text text="{studentNumber}"/>
+                                            <Text text="{studentFirstName} {studentLastName}"/>
+                                            <Text text="{courseCode}"/>
+                                            <Text text="{courseName}"/>
+                                            <ObjectStatus 
+                                                text="{status}"
+                                                state="{= ${status} === 'ENROLLED' ? 'Information' : ${status} === 'COMPLETED' ? 'Success' : 'Warning'}"/>
+                                            <Text text="{grade}"/>
+                                            <Button 
+                                                text="Grade" 
+                                                type="Emphasized"
+                                                press=".onGrade"/>
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+                        </VBox>
+                    </IconTabFilter>
+                </items>
+            </IconTabBar>
+        </content>
+    </Page>
+</mvc:View>

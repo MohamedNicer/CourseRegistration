@@ -1,0 +1,4 @@
+ID;courseCode;courseName;description;ects;quota;enrolled;isActive;semester;instructor_ID;department_ID
+1;CS101;Introduction to Programming;Learn programming fundamentals;6;50;0;true;Fall 2025;1;1
+2;CS201;Data Structures;Advanced data structures and algorithms;6;40;0;true;Fall 2025;1;1
+3;BA101;Business Fundamentals;Introduction to business concepts;6;60;0;true;Fall 2025;2;2

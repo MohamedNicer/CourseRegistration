@@ -1,0 +1,3 @@
+ID;instructorId;email;firstName;lastName;department_ID
+1;INS001;john.smith@university.edu;John;Smith;1
+2;INS002;jane.doe@university.edu;Jane;Doe;2

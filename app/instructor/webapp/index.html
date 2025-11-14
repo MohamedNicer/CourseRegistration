@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Instructor Portal</title>
+    
+    <!-- SAP UI5 CSS for styling -->
+    <link rel="stylesheet" href="https://ui5.sap.com/1.120.0/resources/sap/ui/core/themes/sap_horizon/library.css">
+    <link rel="stylesheet" href="https://ui5.sap.com/1.120.0/resources/sap/m/themes/sap_horizon/library.css">
+    
+    <!-- Auth0 SDK -->
+    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+    
+    <style>
+        body { font-family: "72", Arial, sans-serif; margin: 0; padding: 0; background: #fafafa; }
+        .app-header { background: #28a745; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .app-content { padding: 2rem; max-width: 1400px; margin: 0 auto; }
+        .card { background: white; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .card-header { font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #333; border-bottom: 2px solid #28a745; padding-bottom: 0.5rem; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
+        .stat-card { text-align: center; padding: 1rem; }
+        .stat-value { font-size: 2rem; font-weight: 700; color: #28a745; }
+        .stat-label { color: #666; font-size: 0.9rem; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0; }
+        th { background: #f8f9fa; font-weight: 600; color: #333; }
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin: 2px; }
+        .btn-primary { background: #0078d4; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn:hover { opacity: 0.9; }
+        .grade-input { padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; width: 60px; }
+        .status-enrolled { color: #0078d4; font-weight: 500; }
+        .status-completed { color: #28a745; font-weight: 500; }
+        .status-failed { color: #dc3545; font-weight: 500; }
+        .tabs { display: flex; border-bottom: 1px solid #ccc; margin-bottom: 1rem; }
+        .tab { padding: 10px 20px; cursor: pointer; border: none; background: none; }
+        .tab.active { background: #28a745; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .grade-excellent { color: #28a745; font-weight: 600; }
+        .grade-good { color: #17a2b8; font-weight: 600; }
+        .grade-average { color: #ffc107; font-weight: 600; }
+        .grade-poor { color: #dc3545; font-weight: 600; }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; justify-content: center; align-items: center; }
+        .modal-content { width: 600px; max-height: 90vh; overflow-y: auto; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    </style>
+    
+    <script>
+        window.Auth0Config = {
+            domain: "dev-jgb23rzjcvzqvvnj.us.auth0.com",
+            clientId: "8DDdQBWPQcbEh1SPfp6IuDupaZ1S8o33",
+            redirectUri: window.location.href.split('?')[0]
+        };
+        
+        window.AuthService = {
+            _auth0: null,
+            async init() {
+                if (this._auth0) return;
+                this._auth0 = await auth0.createAuth0Client({
+                    domain: window.Auth0Config.domain,
+                    clientId: window.Auth0Config.clientId,
+                    authorizationParams: { redirect_uri: window.Auth0Config.redirectUri }
+                });
+                if (location.search.includes('code=')) {
+                    await this._auth0.handleRedirectCallback();
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            },
+            async login() { await this._auth0.loginWithRedirect(); },
+            async isAuthenticated() { return await this._auth0.isAuthenticated(); },
+            async getUser() { return await this._auth0.getUser(); },
+            logout() { this._auth0.logout({ logoutParams: { returnTo: window.location.origin + "/launchpad.html" } }); }
+        };
+        
+        let enrollmentsData = [];
+        let coursesData = [];
+        
+        async function initApp() {
+            try {
+                await window.AuthService.init();
+                
+                if (!(await window.AuthService.isAuthenticated())) {
+                    showLogin();
+                    return;
+                }
+                
+                const user = await window.AuthService.getUser();
+                showInstructorApp(user);
+                
+            } catch (error) {
+                console.error("App error:", error);
+                document.body.innerHTML = `<div class="card" style="margin: 50px auto; max-width: 500px;"><div class="card-header">Error</div><p>${error.message}</p></div>`;
+            }
+        }
+        
+        function showLogin() {
+            document.body.innerHTML = `
+                <div class="app-header">
+                    <h1>👨‍🏫 Instructor Portal</h1>
+                </div>
+                <div style="display: flex; justify-content: center; align-items: center; height: 70vh;">
+                    <div class="card" style="text-align: center; min-width: 400px;">
+                        <div class="card-header">Authentication Required</div>
+                        <p style="margin: 1.5rem 0;">Please authenticate to access the instructor portal</p>
+                        <button class="btn btn-success" onclick="window.AuthService.login()" style="padding: 12px 24px; font-size: 16px;">
+                            Login with Auth0
+                        </button>
+                        <br><br>
+                        <a href="/launchpad.html" style="color: #28a745;">Return to Launchpad</a>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function showInstructorApp(user) {
+            document.body.innerHTML = `
+                <div class="app-header">
+                    <h1>👨‍🏫 Instructor Portal</h1>
+                    <div>
+                        Welcome, ${user.name || user.email}
+                        <button class="btn" onclick="window.AuthService.logout()" style="margin-left: 15px; background: rgba(255,255,255,0.2); color: white;">
+                            Logout
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="app-content">
+                    <!-- Stats Overview -->
+                    <div class="grid" style="margin-bottom: 2rem;">
+                        <div class="card stat-card">
+                            <div class="stat-value" id="total-students">-</div>
+                            <div class="stat-label">Total Students</div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-value" id="graded-count">-</div>
+                            <div class="stat-label">Graded Assignments</div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-value" id="pending-count">-</div>
+                            <div class="stat-label">Pending Grades</div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-value" id="average-grade">-</div>
+                            <div class="stat-label">Average Grade</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Instructor Management Tabs -->
+                    <div class="card">
+                        <div class="tabs">
+                            <button class="tab active" onclick="showTab('grading')">📝 Grade Management</button>
+                            <button class="tab" onclick="showTab('roster')">👥 Course Roster</button>
+                            <button class="tab" onclick="showTab('analytics')">📊 Performance Analytics</button>
+                            <button class="tab" onclick="showTab('tools')">🛠️ Course Tools</button>
+                        </div>
+                        
+                        <!-- Grading Tab -->
+                        <div id="grading-tab" class="tab-content active">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h3>Student Grading</h3>
+                                <button class="btn btn-success" onclick="bulkGradeModal()">📊 Bulk Grade Entry</button>
+                            </div>
+                            <div id="grading-content">Loading student enrollments...</div>
+                        </div>
+                        
+                        <!-- Roster Tab -->
+                        <div id="roster-tab" class="tab-content">
+                            <h3>Course Roster Management</h3>
+                            <div id="roster-content">Loading course rosters...</div>
+                        </div>
+                        
+                        <!-- Analytics Tab -->
+                        <div id="analytics-tab" class="tab-content">
+                            <h3>Performance Analytics</h3>
+                            <div id="analytics-content">Loading performance data...</div>
+                        </div>
+                        
+                        <!-- Tools Tab -->
+                        <div id="tools-tab" class="tab-content">
+                            <h3>Course Management Tools</h3>
+                            <div id="tools-content">Loading course tools...</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            loadInstructorData();
+        }
+        
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            // Show selected tab
+            event.target.classList.add('active');
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // Load specific content if needed
+            if (tabName === 'roster') loadRosterContent();
+            if (tabName === 'analytics') loadAnalyticsContent();
+            if (tabName === 'tools') loadToolsContent();
+        }
+        
+        async function loadInstructorData() {
+            try {
+                const response = await fetch("/instructor/Enrollments");
+                const data = await response.json();
+                enrollmentsData = data.value || [];
+                
+                // Update stats
+                const totalStudents = enrollmentsData.length;
+                const gradedCount = enrollmentsData.filter(e => e.grade !== null && e.grade !== undefined).length;
+                const pendingCount = totalStudents - gradedCount;
+                
+                const grades = enrollmentsData.filter(e => e.grade !== null && e.grade !== undefined).map(e => e.grade);
+                const avgGrade = grades.length > 0 ? (grades.reduce((sum, g) => sum + g, 0) / grades.length).toFixed(1) : 'N/A';
+                
+                document.getElementById('total-students').textContent = totalStudents;
+                document.getElementById('graded-count').textContent = gradedCount;
+                document.getElementById('pending-count').textContent = pendingCount;
+                document.getElementById('average-grade').textContent = avgGrade;
+                
+                // Load grading content
+                loadGradingContent();
+                
+            } catch (err) {
+                console.error('Error loading data:', err);
+            }
+        }
+        
+        function loadGradingContent() {
+            const gradingContent = `
+                <div style="margin-bottom: 1rem;">
+                    <button class="btn btn-primary" onclick="filterStudents('all')">All Students</button>
+                    <button class="btn btn-warning" onclick="filterStudents('pending')">Pending Grades</button>
+                    <button class="btn btn-success" onclick="filterStudents('graded')">Graded</button>
+                </div>
+                <table id="grading-table">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Student Number</th>
+                            <th>Course</th>
+                            <th>Status</th>
+                            <th>Current Grade</th>
+                            <th>Grade Input</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${enrollmentsData.map(e => `
+                            <tr class="student-row" data-status="${e.grade !== null && e.grade !== undefined ? 'graded' : 'pending'}">
+                                <td>${e.student?.firstName || ''} ${e.student?.lastName || ''}</td>
+                                <td>${e.student?.studentNumber || 'N/A'}</td>
+                                <td>${e.course?.courseName || 'N/A'}</td>
+                                <td><span class="status-${e.status?.toLowerCase()}">${e.status}</span></td>
+                                <td class="${getGradeClass(e.grade)}">${formatGrade(e.grade)}</td>
+                                <td>
+                                    <input type="number" class="grade-input" id="grade-${e.ID}" 
+                                           min="0" max="20" step="0.5" placeholder="0-20" 
+                                           value="${e.grade || ''}">
+                                </td>
+                                <td>
+                                    <button class="btn btn-success" onclick="assignGrade(${e.ID}, '${e.student?.firstName} ${e.student?.lastName}')">
+                                        ${e.grade !== null && e.grade !== undefined ? 'Update' : 'Assign'}
+                                    </button>
+                                    <button class="btn btn-primary" onclick="gradeHistory(${e.ID})">History</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            document.getElementById('grading-content').innerHTML = gradingContent;
+        }
+        
+        function getGradeClass(grade) {
+            if (grade === null || grade === undefined) return '';
+            if (grade >= 16) return 'grade-excellent';
+            if (grade >= 13) return 'grade-good';
+            if (grade >= 10) return 'grade-average';
+            return 'grade-poor';
+        }
+        
+        function formatGrade(grade) {
+            if (grade === null || grade === undefined) return 'Not graded';
+            return grade + '/20';
+        }
+        
+        function filterStudents(type) {
+            const rows = document.querySelectorAll('.student-row');
+            rows.forEach(row => {
+                const status = row.dataset.status;
+                if (type === 'all' || status === type) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
+        async function assignGrade(enrollmentId, studentName) {
+            const gradeInput = document.getElementById(`grade-${enrollmentId}`);
+            const grade = parseFloat(gradeInput.value);
+            
+            if (isNaN(grade) || grade < 0 || grade > 20) {
+                alert('❌ Please enter a valid grade between 0 and 20');
+                return;
+            }
+            
+            if (confirm(`📝 Assign grade ${grade}/20 to ${studentName}?`)) {
+                try {
+                    // In real implementation, this would call OData update
+                    // For demo, we'll update local data and refresh
+                    const enrollment = enrollmentsData.find(e => e.ID === enrollmentId);
+                    if (enrollment) {
+                        enrollment.grade = grade;
+                    }
+                    
+                    alert(`✅ Grade ${grade}/20 assigned successfully to ${studentName}!`);
+                    loadInstructorData(); // Refresh all data
+                    
+                } catch (error) {
+                    alert('❌ Error assigning grade: ' + error.message);
+                }
+            }
+        }
+        
+        function bulkGradeModal() {
+            const modalHtml = `
+                <div class="modal" onclick="closeModal(event)">
+                    <div class="modal-content card" onclick="event.stopPropagation()">
+                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            📊 Bulk Grade Entry
+                            <button onclick="closeModal()" style="border: none; background: none; font-size: 24px; cursor: pointer;">&times;</button>
+                        </div>
+                        <div>
+                            <p>Apply the same grade to multiple students:</p>
+                            <div class="form-group">
+                                <label>Grade (0-20):</label>
+                                <input type="number" id="bulk-grade" min="0" max="20" step="0.5" placeholder="Enter grade">
+                            </div>
+                            <div class="form-group">
+                                <label>Apply to:</label>
+                                <select id="bulk-target">
+                                    <option value="pending">All students without grades</option>
+                                    <option value="all">All students (overwrite existing)</option>
+                                    <option value="failed">Students with grades < 10</option>
+                                </select>
+                            </div>
+                            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 1.5rem;">
+                                <button onclick="closeModal()" class="btn">Cancel</button>
+                                <button onclick="applyBulkGrade()" class="btn btn-success">Apply Grades</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+        
+        function applyBulkGrade() {
+            const grade = parseFloat(document.getElementById('bulk-grade').value);
+            const target = document.getElementById('bulk-target').value;
+            
+            if (isNaN(grade) || grade < 0 || grade > 20) {
+                alert('❌ Please enter a valid grade between 0 and 20');
+                return;
+            }
+            
+            let affectedStudents = [];
+            
+            switch(target) {
+                case 'pending':
+                    affectedStudents = enrollmentsData.filter(e => e.grade === null || e.grade === undefined);
+                    break;
+                case 'all':
+                    affectedStudents = enrollmentsData;
+                    break;
+                case 'failed':
+                    affectedStudents = enrollmentsData.filter(e => e.grade !== null && e.grade < 10);
+                    break;
+            }
+            
+            if (affectedStudents.length === 0) {
+                alert('❌ No students match the selected criteria');
+                return;
+            }
+            
+            if (confirm(`📊 Apply grade ${grade}/20 to ${affectedStudents.length} students?`)) {
+                affectedStudents.forEach(student => {
+                    student.grade = grade;
+                });
+                
+                alert(`✅ Grade ${grade}/20 applied to ${affectedStudents.length} students!`);
+                closeModal();
+                loadInstructorData(); // Refresh
+            }
+        }
+        
+        function loadRosterContent() {
+            document.getElementById('roster-content').innerHTML = `
+                <div style="margin-bottom: 1rem;">
+                    <button class="btn btn-primary" onclick="exportRoster()">📄 Export Roster</button>
+                    <button class="btn btn-success" onclick="sendAnnouncement()">📢 Send Announcement</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Student Name</th>
+                            <th>Student Number</th>
+                            <th>Email</th>
+                            <th>Department</th>
+                            <th>Enrollment Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${enrollmentsData.map(e => `
+                            <tr>
+                                <td>${e.student?.firstName || ''} ${e.student?.lastName || ''}</td>
+                                <td>${e.student?.studentNumber || 'N/A'}</td>
+                                <td>${e.student?.email || 'N/A'}</td>
+                                <td>${e.student?.department_ID || 'N/A'}</td>
+                                <td>${new Date(e.enrollmentDate).toLocaleDateString()}</td>
+                                <td><span class="status-${e.status?.toLowerCase()}">${e.status}</span></td>
+                                <td>
+                                    <button class="btn btn-primary" onclick="viewStudentProfile(${e.student?.ID})">View Profile</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+        
+        function loadAnalyticsContent() {
+            const grades = enrollmentsData.filter(e => e.grade !== null && e.grade !== undefined).map(e => e.grade);
+            
+            if (grades.length === 0) {
+                document.getElementById('analytics-content').innerHTML = '<p>No grades available for analysis yet.</p>';
+                return;
+            }
+            
+            const excellent = grades.filter(g => g >= 16).length;
+            const good = grades.filter(g => g >= 13 && g < 16).length;
+            const average = grades.filter(g => g >= 10 && g < 13).length;
+            const poor = grades.filter(g => g < 10).length;
+            
+            const avgGrade = (grades.reduce((sum, g) => sum + g, 0) / grades.length).toFixed(1);
+            const maxGrade = Math.max(...grades);
+            const minGrade = Math.min(...grades);
+            
+            document.getElementById('analytics-content').innerHTML = `
+                <div class="grid">
+                    <div class="card stat-card">
+                        <div class="stat-value">${excellent}</div>
+                        <div class="stat-label">Excellent (16-20)</div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-value">${good}</div>
+                        <div class="stat-label">Good (13-15)</div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-value">${average}</div>
+                        <div class="stat-label">Average (10-12)</div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-value">${poor}</div>
+                        <div class="stat-label">Poor (<10)</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 2rem;">
+                    <h4>Grade Distribution</h4>
+                    <p><strong>Average Grade:</strong> ${avgGrade}/20</p>
+                    <p><strong>Highest Grade:</strong> ${maxGrade}/20</p>
+                    <p><strong>Lowest Grade:</strong> ${minGrade}/20</p>
+                    <p><strong>Pass Rate:</strong> ${((grades.filter(g => g >= 10).length / grades.length) * 100).toFixed(1)}%</p>
+                </div>
+            `;
+        }
+        
+        function loadToolsContent() {
+            document.getElementById('tools-content').innerHTML = `
+                <div class="grid">
+                    <div class="card">
+                        <h4>📊 Grade Management</h4>
+                        <p>Tools for managing student grades and assessments</p>
+                        <button class="btn btn-primary" onclick="bulkGradeModal()">Bulk Grade Entry</button>
+                        <button class="btn btn-success" onclick="gradeReport()">Generate Grade Report</button>
+                    </div>
+                    
+                    <div class="card">
+                        <h4>📢 Communication</h4>
+                        <p>Send announcements and messages to students</p>
+                        <button class="btn btn-primary" onclick="sendAnnouncement()">Send Announcement</button>
+                        <button class="btn btn-success" onclick="emailStudents()">Email Students</button>
+                    </div>
+                    
+                    <div class="card">
+                        <h4>📄 Reports & Export</h4>
+                        <p>Generate reports and export data</p>
+                        <button class="btn btn-primary" onclick="exportRoster()">Export Class Roster</button>
+                        <button class="btn btn-success" onclick="exportGrades()">Export Grades</button>
+                    </div>
+                    
+                    <div class="card">
+                        <h4>⚙️ Course Settings</h4>
+                        <p>Manage course configuration and settings</p>
+                        <button class="btn btn-warning" onclick="courseSettings()">Course Settings</button>
+                        <button class="btn btn-danger" onclick="dropStudent()">Drop Student</button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Placeholder functions for additional features
+        function gradeHistory(enrollmentId) { alert('📋 Grade History - Feature coming soon!'); }
+        function viewStudentProfile(studentId) { alert('👤 Student Profile - Feature coming soon!'); }
+        function exportRoster() { alert('📄 Export Roster - Feature coming soon!'); }
+        function sendAnnouncement() { alert('📢 Send Announcement - Feature coming soon!'); }
+        function gradeReport() { alert('📊 Grade Report - Feature coming soon!'); }
+        function emailStudents() { alert('📧 Email Students - Feature coming soon!'); }
+        function exportGrades() { alert('📊 Export Grades - Feature coming soon!'); }
+        function courseSettings() { alert('⚙️ Course Settings - Feature coming soon!'); }
+        function dropStudent() { alert('🗑️ Drop Student - Feature coming soon!'); }
+        
+        function closeModal() {
+            document.querySelectorAll('.modal').forEach(modal => modal.remove());
+        }
+    </script>
+</head>
+<body onload="initApp()">
+    <div style="display: flex; justify-content: center; align-items: center; height: 100vh;">
+        <div class="card">Loading application...</div>
+    </div>
+</body>
+</html>

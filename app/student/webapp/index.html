@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Student Portal</title>
+    
+    <!-- SAP UI5 CSS for styling -->
+    <link rel="stylesheet" href="https://ui5.sap.com/1.120.0/resources/sap/ui/core/themes/sap_horizon/library.css">
+    <link rel="stylesheet" href="https://ui5.sap.com/1.120.0/resources/sap/m/themes/sap_horizon/library.css">
+    
+    <!-- Auth0 SDK -->
+    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+    
+    <style>
+        body { font-family: "72", Arial, sans-serif; margin: 0; padding: 0; background: #fafafa; }
+        .app-header { background: #0078d4; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .app-content { padding: 2rem; max-width: 1200px; margin: 0 auto; }
+        .card { background: white; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .card-header { font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #333; border-bottom: 2px solid #0078d4; padding-bottom: 0.5rem; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+        .stat-card { text-align: center; padding: 1rem; }
+        .stat-value { font-size: 2rem; font-weight: 700; color: #0078d4; }
+        .stat-label { color: #666; font-size: 0.9rem; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0; }
+        th { background: #f8f9fa; font-weight: 600; color: #333; }
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .btn-primary { background: #0078d4; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn:hover { opacity: 0.9; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        .status-enrolled { color: #0078d4; font-weight: 500; }
+        .status-completed { color: #28a745; font-weight: 500; }
+        .ects-success { color: #28a745; font-weight: 600; }
+        .ects-warning { color: #ffa500; font-weight: 600; }
+        .ects-danger { color: #dc3545; font-weight: 600; }
+    </style>
+    
+    <script>
+        window.Auth0Config = {
+            domain: "dev-jgb23rzjcvzqvvnj.us.auth0.com",
+            clientId: "8DDdQBWPQcbEh1SPfp6IuDupaZ1S8o33",
+            redirectUri: window.location.href.split('?')[0]
+        };
+        
+        window.AuthService = {
+            _auth0: null,
+            async init() {
+                if (this._auth0) return;
+                this._auth0 = await auth0.createAuth0Client({
+                    domain: window.Auth0Config.domain,
+                    clientId: window.Auth0Config.clientId,
+                    authorizationParams: { redirect_uri: window.Auth0Config.redirectUri }
+                });
+                if (location.search.includes('code=')) {
+                    await this._auth0.handleRedirectCallback();
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            },
+            async login() { await this._auth0.loginWithRedirect(); },
+            async isAuthenticated() { return await this._auth0.isAuthenticated(); },
+            async getUser() { return await this._auth0.getUser(); },
+            logout() { this._auth0.logout({ logoutParams: { returnTo: window.location.origin + "/launchpad.html" } }); }
+        };
+        
+        async function initApp() {
+            try {
+                await window.AuthService.init();
+                
+                if (!(await window.AuthService.isAuthenticated())) {
+                    showLogin();
+                    return;
+                }
+                
+                const user = await window.AuthService.getUser();
+                showStudentApp(user);
+                
+            } catch (error) {
+                console.error("App error:", error);
+                document.body.innerHTML = `<div class="card" style="margin: 50px auto; max-width: 500px;"><div class="card-header">Error</div><p>${error.message}</p></div>`;
+            }
+        }
+        
+        function showLogin() {
+            document.body.innerHTML = `
+                <div class="app-header">
+                    <h1>🎓 Student Portal</h1>
+                </div>
+                <div style="display: flex; justify-content: center; align-items: center; height: 70vh;">
+                    <div class="card" style="text-align: center; min-width: 400px;">
+                        <div class="card-header">Authentication Required</div>
+                        <p style="margin: 1.5rem 0;">Please authenticate to access your student portal</p>
+                        <button class="btn btn-primary" onclick="window.AuthService.login()" style="padding: 12px 24px; font-size: 16px;">
+                            Login with Auth0
+                        </button>
+                        <br><br>
+                        <a href="/launchpad.html" style="color: #0078d4;">Return to Launchpad</a>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function showStudentApp(user) {
+            document.body.innerHTML = `
+                <div class="app-header">
+                    <h1>🎓 Student Portal</h1>
+                    <div>
+                        Welcome, ${user.name || user.email}
+                        <button class="btn" onclick="window.AuthService.logout()" style="margin-left: 15px; background: rgba(255,255,255,0.2); color: white;">
+                            Logout
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="app-content">
+                    <!-- Stats Overview -->
+                    <div class="grid" style="margin-bottom: 2rem;">
+                        <div class="card stat-card">
+                            <div class="stat-value" id="ects-used">-</div>
+                            <div class="stat-label">ECTS Used</div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-value" id="ects-available">-</div>
+                            <div class="stat-label">ECTS Available</div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-value" id="total-courses">-</div>
+                            <div class="stat-label">Enrolled Courses</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Student Profile -->
+                    <div class="card">
+                        <div class="card-header">👤 Student Profile</div>
+                        <div id="profile-content">Loading profile...</div>
+                    </div>
+                    
+                    <!-- Current Enrollments -->
+                    <div class="card">
+                        <div class="card-header">📚 My Enrollments</div>
+                        <div id="enrollments-content">Loading enrollments...</div>
+                    </div>
+                    
+                    <!-- Available Courses -->
+                    <div class="card">
+                        <div class="card-header">🔍 Available Courses</div>
+                        <div id="courses-content">Loading available courses...</div>
+                    </div>
+                </div>
+            `;
+            
+            loadAllData();
+        }
+        
+        function loadAllData() {
+            loadProfile();
+            loadEnrollments();
+            loadAvailableCourses();
+        }
+        
+        function loadProfile() {
+            fetch("/student/MyProfile(1)?$expand=department")
+                .then(response => response.json())
+                .then(student => {
+                    document.getElementById('profile-content').innerHTML = `
+                        <div class="grid">
+                            <div>
+                                <p><strong>Student Number:</strong> ${student.studentNumber}</p>
+                                <p><strong>Name:</strong> ${student.firstName} ${student.lastName}</p>
+                                <p><strong>Email:</strong> ${student.email}</p>
+                            </div>
+                            <div>
+                                <p><strong>Department:</strong> ${student.departmentName}</p>
+                                <p><strong>Faculty:</strong> ${student.faculty}</p>
+                                <p><strong>ECTS Limit:</strong> ${student.ectsLimit}</p>
+                            </div>
+                        </div>
+                    `;
+                })
+                .catch(err => {
+                    document.getElementById('profile-content').innerHTML = '<p style="color: #dc3545;">Error loading profile data</p>';
+                });
+        }
+        
+        function loadEnrollments() {
+            Promise.all([
+                fetch("/student/MyEnrollments").then(r => r.json()),
+                fetch("/student/MyProfile(1)").then(r => r.json())
+            ]).then(([enrollmentsData, profile]) => {
+                const enrollments = enrollmentsData.value || [];
+                const ectsUsed = enrollments.reduce((sum, e) => 
+                    (e.status === "ENROLLED" || e.status === "COMPLETED") ? sum + (e.ects || 0) : sum, 0);
+                const ectsLimit = profile.ectsLimit || 60;
+                const ectsAvailable = ectsLimit - ectsUsed;
+                
+                // Update stats
+                document.getElementById('ects-used').textContent = ectsUsed;
+                document.getElementById('ects-available').textContent = ectsAvailable;
+                document.getElementById('ects-available').className = `stat-value ${
+                    ectsAvailable > 10 ? 'ects-success' : ectsAvailable > 0 ? 'ects-warning' : 'ects-danger'
+                }`;
+                document.getElementById('total-courses').textContent = enrollments.length;
+                
+                // Enrollments table
+                document.getElementById('enrollments-content').innerHTML = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Course Code</th>
+                                <th>Course Name</th>
+                                <th>ECTS</th>
+                                <th>Status</th>
+                                <th>Grade</th>
+                                <th>Semester</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${enrollments.map(e => `
+                                <tr>
+                                    <td>${e.courseCode || 'N/A'}</td>
+                                    <td>${e.courseName || 'N/A'}</td>
+                                    <td>${e.ects || 0}</td>
+                                    <td><span class="status-${e.status?.toLowerCase()}">${e.status}</span></td>
+                                    <td>${e.grade || '-'}</td>
+                                    <td>${e.semester || 'N/A'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            });
+        }
+        
+        function loadAvailableCourses() {
+            fetch("/student/AvailableCourses")
+                .then(response => response.json())
+                .then(data => {
+                    const courses = data.value || [];
+                    document.getElementById('courses-content').innerHTML = `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Course Code</th>
+                                    <th>Course Name</th>
+                                    <th>ECTS</th>
+                                    <th>Quota</th>
+                                    <th>Department</th>
+                                    <th>Semester</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${courses.map(course => `
+                                    <tr>
+                                        <td>${course.courseCode}</td>
+                                        <td>${course.courseName}</td>
+                                        <td>${course.ects}</td>
+                                        <td>${course.enrolled}/${course.quota}</td>
+                                        <td>${course.departmentName || 'N/A'}</td>
+                                        <td>${course.semester}</td>
+                                        <td>
+                                            <button class="btn btn-primary" 
+                                                    onclick="enrollInCourse(${course.ID}, '${course.courseName}', ${course.ects})" 
+                                                    ${course.enrolled >= course.quota ? 'disabled' : ''}>
+                                                ${course.enrolled >= course.quota ? 'Full' : 'Enroll'}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                });
+        }
+        
+        function enrollInCourse(courseId, courseName, ects) {
+            if (confirm(`Enroll in ${courseName} (${ects} ECTS)?`)) {
+                fetch('/admin/Enrollments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        student_ID: 1,
+                        course_ID: courseId,
+                        enrollmentDate: new Date().toISOString(),
+                        status: 'ENROLLED'
+                    })
+                })
+                .then(() => {
+                    alert('✅ Enrolled successfully!');
+                    loadAllData(); // Refresh all data
+                })
+                .catch(err => alert('❌ Enrollment failed: ' + err.message));
+            }
+        }
+    </script>
+</head>
+<body onload="initApp()">
+    <div style="display: flex; justify-content: center; align-items: center; height: 100vh;">
+        <div class="card">Loading application...</div>
+    </div>
+</body>
+</html>

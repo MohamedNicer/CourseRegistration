@@ -1,0 +1,113 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:f="sap.ui.layout.form">
+    
+    <Dialog
+        id="createCourseDialog"
+        title="Create New Course"
+        contentWidth="500px">
+        <content>
+            <f:SimpleForm
+                editable="true"
+                layout="ResponsiveGridLayout"
+                labelSpanXL="4"
+                labelSpanL="4"
+                labelSpanM="4"
+                labelSpanS="12"
+                adjustLabelSpan="false"
+                emptySpanXL="0"
+                emptySpanL="0"
+                emptySpanM="0"
+                emptySpanS="0"
+                columnsXL="1"
+                columnsL="1"
+                columnsM="1"
+                singleContainerFullSize="false">
+                <f:content>
+                    <Label text="Course Code" required="true"/>
+                    <Input
+                        id="courseCodeInput"
+                        value="{newCourse>/courseCode}"
+                        placeholder="e.g., CS301"
+                        required="true"/>
+                    
+                    <Label text="Course Name" required="true"/>
+                    <Input
+                        id="courseNameInput"
+                        value="{newCourse>/courseName}"
+                        placeholder="e.g., Advanced Programming"
+                        required="true"/>
+                    
+                    <Label text="Description"/>
+                    <TextArea
+                        id="descriptionInput"
+                        value="{newCourse>/description}"
+                        placeholder="Course description"
+                        rows="3"/>
+                    
+                    <Label text="ECTS" required="true"/>
+                    <Input
+                        id="ectsInput"
+                        value="{newCourse>/ects}"
+                        type="Number"
+                        placeholder="e.g., 6"
+                        required="true"/>
+                    
+                    <Label text="Quota" required="true"/>
+                    <Input
+                        id="quotaInput"
+                        value="{newCourse>/quota}"
+                        type="Number"
+                        placeholder="e.g., 50"
+                        required="true"/>
+                    
+                    <Label text="Instructor" required="true"/>
+                    <Select
+                        id="instructorSelect"
+                        selectedKey="{newCourse>/instructor_ID}"
+                        items="{/Instructors}"
+                        required="true">
+                        <core:Item
+                            key="{ID}"
+                            text="{firstName} {lastName}"/>
+                    </Select>
+                    
+                    <Label text="Department" required="true"/>
+                    <Select
+                        id="departmentSelect"
+                        selectedKey="{newCourse>/department_ID}"
+                        items="{/Departments}"
+                        required="true">
+                        <core:Item
+                            key="{ID}"
+                            text="{departmentName}"/>
+                    </Select>
+                    
+                    <Label text="Semester" required="true"/>
+                    <Input
+                        id="semesterInput"
+                        value="{newCourse>/semester}"
+                        placeholder="e.g., Fall 2025"
+                        required="true"/>
+                    
+                    <Label text="Active"/>
+                    <CheckBox
+                        id="isActiveCheckbox"
+                        selected="{newCourse>/isActive}"/>
+                </f:content>
+            </f:SimpleForm>
+        </content>
+        <beginButton>
+            <Button
+                text="Create"
+                type="Emphasized"
+                press=".onCreateCourseSubmit"/>
+        </beginButton>
+        <endButton>
+            <Button
+                text="Cancel"
+                press=".onCreateCourseCancel"/>
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

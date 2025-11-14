@@ -1,0 +1,3 @@
+ID;studentNumber;email;firstName;lastName;ectsLimit;department_ID
+1;STU001;alice@student.edu;Alice;Johnson;30;1
+2;STU002;bob@student.edu;Bob;Williams;30;1

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Registration System</title>
+    <script id="sap-ui-bootstrap"
+        src="https://ui5.sap.com/1.120.0/resources/sap-ui-core.js"
+        data-sap-ui-theme="sap_horizon"
+        data-sap-ui-libs="sap.m,sap.ui.core,sap.f"
+        data-sap-ui-resourceroots='{"shared": "./app/shared"}'>
+    </script>
+    <script src="app/shared/auth/auth0-config.js"></script>
+</head>
+<body class="sapUiBody">
+    <div id="content"></div>
+    
+    <script>
+        sap.ui.require([
+            "sap/m/App",
+            "sap/m/Page", 
+            "sap/m/TileContainer",
+            "sap/m/StandardTile",
+            "sap/m/Button",
+            "sap/m/MessageBox",
+            "shared/auth/auth-service"
+        ], function(App, Page, TileContainer, StandardTile, Button, MessageBox, AuthService) {
+            
+            async function initLaunchpad() {
+                try {
+                    await AuthService.init();
+                    
+                    const isAuthenticated = await AuthService.isAuthenticated();
+                    
+                    if (!isAuthenticated) {
+                        showLoginPage();
+                        return;
+                    }
+                    
+                    const user = await AuthService.getUser();
+                    showMainLaunchpad(user);
+                    
+                } catch (error) {
+                    console.error("Auth initialization failed:", error);
+                    showLoginPage();
+                }
+            }
+            
+            function showLoginPage() {
+                const loginPage = new Page({
+                    title: "Course Registration System",
+                    content: [
+                        new sap.m.VBox({
+                            alignItems: "Center",
+                            justifyContent: "Center",
+                            class: "sapUiLargeMargin",
+                            items: [
+                                new sap.m.Title({
+                                    text: "Welcome to Course Registration",
+                                    level: "H1"
+                                }),
+                                new sap.m.Text({
+                                    text: "Please login to access the system",
+                                    class: "sapUiMediumMarginTop"
+                                }),
+                                new Button({
+                                    text: "Login",
+                                    type: "Emphasized",
+                                    press: function() {
+                                        AuthService.login();
+                                    },
+                                    class: "sapUiLargeMarginTop"
+                                })
+                            ]
+                        })
+                    ]
+                });
+                
+                const app = new App({
+                    pages: [loginPage]
+                });
+                
+                app.placeAt("content");
+            }
+            
+            function showMainLaunchpad(user) {
+                const userRole = user['custom:role'] || 'student'; // Get role from Auth0
+                
+                const tiles = [];
+                
+                // Student tile
+                if (userRole === 'student' || userRole === 'admin') {
+                    tiles.push(new StandardTile({
+                        icon: "sap-icon://education",
+                        title: "Student Portal",
+                        info: "Course Registration & Profile",
+                        press: function() {
+                            window.location.href = "app/student/webapp/index.html";
+                        }
+                    }));
+                }
+                
+                // Instructor tile
+                if (userRole === 'instructor' || userRole === 'admin') {
+                    tiles.push(new StandardTile({
+                        icon: "sap-icon://person-placeholder",
+                        title: "Instructor Portal", 
+                        info: "Grade Management",
+                        press: function() {
+                            window.location.href = "app/instructor/webapp/index.html";
+                        }
+                    }));
+                }
+                
+                // Admin tile
+                if (userRole === 'admin') {
+                    tiles.push(new StandardTile({
+                        icon: "sap-icon://settings",
+                        title: "Admin Portal",
+                        info: "System Management",
+                        press: function() {
+                            window.location.href = "app/admin/webapp/index.html";
+                        }
+                    }));
+                }
+                
+                const launchpadPage = new Page({
+                    title: "Course Registration System",
+                    content: [
+                        new sap.m.VBox({
+                            class: "sapUiMediumMargin",
+                            items: [
+                                new sap.m.HBox({
+                                    justifyContent: "SpaceBetween",
+                                    alignItems: "Center",
+                                    class: "sapUiMediumMarginBottom",
+                                    items: [
+                                        new sap.m.Title({
+                                            text: "Welcome, " + user.name,
+                                            level: "H2"
+                                        }),
+                                        new Button({
+                                            text: "Logout",
+                                            press: function() {
+                                                AuthService.logout();
+                                            }
+                                        })
+                                    ]
+                                }),
+                                new TileContainer({
+                                    tiles: tiles
+                                })
+                            ]
+                        })
+                    ]
+                });
+                
+                const app = new App({
+                    pages: [launchpadPage]
+                });
+                
+                app.placeAt("content");
+            }
+            
+            // Initialize the launchpad
+            initLaunchpad();
+        });
+    </script>
+</body>
+</html>

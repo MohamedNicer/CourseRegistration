@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Registration System</title>
+    
+    <script id="sap-ui-bootstrap"
+        src="https://sapui5.hana.ondemand.com/resources/sap-ui-core.js"
+        data-sap-ui-theme="sap_horizon"
+        data-sap-ui-libs="sap.m"
+        data-sap-ui-compatVersion="edge"
+        data-sap-ui-async="true">
+    </script>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "72", Arial, sans-serif;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #0854a0 0%, #1873bf 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 300;
+        }
+        
+        .header p {
+            margin: 0.5rem 0 0 0;
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+        
+        .tile-container {
+            max-width: 1200px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+        
+        .tile {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 2px solid transparent;
+        }
+        
+        .tile:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+            border-color: #0854a0;
+        }
+        
+        .tile-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .tile-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #0854a0;
+            margin-bottom: 0.5rem;
+        }
+        
+        .tile-description {
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .student-tile .tile-icon { color: #2196F3; }
+        .instructor-tile .tile-icon { color: #FF9800; }
+        .admin-tile .tile-icon { color: #4CAF50; }
+        
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 3rem;
+        }
+        
+        @media (max-width: 768px) {
+            .tile-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    
+    <script>
+        function navigateToApp(appPath) {
+            window.location.href = appPath;
+        }
+    </script>
+</head>
+<body>
+    <div class="header">
+        <h1>Course Registration System</h1>
+        <p>Select your role to continue</p>
+    </div>
+    
+    <div class="tile-container">
+        <!-- Student Tile -->
+        <div class="tile student-tile" onclick="navigateToApp('./student/webapp/index.html')">
+            <div class="tile-icon">📚</div>
+            <div class="tile-title">Student Portal</div>
+            <div class="tile-description">
+                Browse available courses, enroll in classes, and view your enrollments
+            </div>
+        </div>
+        
+        <!-- Instructor Tile -->
+        <div class="tile instructor-tile" onclick="navigateToApp('./instructor/webapp/index.html')">
+            <div class="tile-icon">👨‍🏫</div>
+            <div class="tile-title">Instructor Portal</div>
+            <div class="tile-description">
+                Manage your courses, view student enrollments, and assign grades
+            </div>
+        </div>
+        
+        <!-- Admin Tile -->
+        <div class="tile admin-tile" onclick="navigateToApp('./admin/webapp/index.html')">
+            <div class="tile-icon">⚙️</div>
+            <div class="tile-title">Administration</div>
+            <div class="tile-description">
+                Manage courses, students, instructors, and system configuration
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>Course Registration System v1.0 | Built with SAP Cloud Application Programming Model</p>
+    </div>
+</body>
+</html>

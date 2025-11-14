@@ -1,0 +1,224 @@
+<mvc:View
+    controllerName="student.controller.Main"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:f="sap.ui.layout.form"
+    height="100%">
+    
+    <Page title="Student Portal" showNavButton="true" navButtonPress=".onNavBack">
+        <content>
+            <VBox>
+                <!-- Student Profile Card -->
+                <Panel headerText="My Profile" class="sapUiResponsiveMargin">
+                    <f:SimpleForm
+                        layout="ResponsiveGridLayout"
+                        editable="false"
+                        labelSpanXL="4"
+                        labelSpanL="4"
+                        labelSpanM="4"
+                        labelSpanS="12"
+                        adjustLabelSpan="false"
+                        emptySpanXL="0"
+                        emptySpanL="0"
+                        emptySpanM="0"
+                        emptySpanS="0"
+                        columnsXL="2"
+                        columnsL="2"
+                        columnsM="1"
+                        singleContainerFullSize="false">
+                        <f:content>
+                            <Label text="Student Number"/>
+                            <Text text="{profile>/studentNumber}"/>
+                            
+                            <Label text="Name"/>
+                            <Text text="{profile>/firstName} {profile>/lastName}"/>
+                            
+                            <Label text="Email"/>
+                            <Text text="{profile>/email}"/>
+                            
+                            <Label text="Department"/>
+                            <Text text="{profile>/departmentName}"/>
+                            
+                            <Label text="Faculty"/>
+                            <Text text="{profile>/faculty}"/>
+                            
+                            <Label text="ECTS Used"/>
+                            <Text text="{profile>/ectsUsed} / {profile>/ectsLimit}"/>
+                            
+                            <Label text="ECTS Available"/>
+                            <ObjectStatus
+                                text="{profile>/ectsAvailable} ECTS"
+                                state="{parts: ['profile>/ectsAvailable'], formatter: '.formatEctsState'}"/>
+                        </f:content>
+                    </f:SimpleForm>
+                </Panel>
+                
+                <!-- Tab Bar -->
+                <IconTabBar id="iconTabBar" select=".onTabSelect" class="sapUiResponsiveMargin">
+                    
+                    <!-- Available Courses Tab -->
+                    <items>
+                        <IconTabFilter text="Available Courses" key="available">
+                            <VBox class="sapUiSmallMargin">
+                                <Title text="Browse and Enroll in Courses" level="H2" class="sapUiSmallMarginBottom"/>
+                                
+                                <Table
+                                    id="courseTable"
+                                    items="{
+                                        path: '/AvailableCourses',
+                                        parameters: {
+                                            $expand: 'instructor,department'
+                                        }
+                                    }"
+                                    mode="SingleSelectMaster"
+                                    selectionChange=".onCourseSelect">
+                                    <columns>
+                                        <Column width="10%">
+                                            <Text text="Code"/>
+                                        </Column>
+                                        <Column width="25%">
+                                            <Text text="Course Name"/>
+                                        </Column>
+                                        <Column width="8%">
+                                            <Text text="ECTS"/>
+                                        </Column>
+                                        <Column width="15%">
+                                            <Text text="Department"/>
+                                        </Column>
+                                        <Column width="12%">
+                                            <Text text="Semester"/>
+                                        </Column>
+                                        <Column width="10%">
+                                            <Text text="Quota"/>
+                                        </Column>
+                                        <Column width="10%">
+                                            <Text text="Status"/>
+                                        </Column>
+                                        <Column width="10%">
+                                            <Text text="Actions"/>
+                                        </Column>
+                                    </columns>
+                                    <items>
+                                        <ColumnListItem>
+                                            <cells>
+                                                <Text text="{courseCode}"/>
+                                                <Text text="{courseName}"/>
+                                                <Text text="{ects}"/>
+                                                <Text text="{department/departmentName}"/>
+                                                <Text text="{semester}"/>
+                                                <Text text="{
+                                                    parts: [
+                                                        {path: 'enrolled', targetType: 'any'},
+                                                        {path: 'quota', targetType: 'any'}
+                                                    ],
+                                                    formatter: '.formatQuotaText'
+                                                }"/>
+                                                <ObjectStatus 
+                                                    text="{
+                                                        parts: [
+                                                            {path: 'enrolled', targetType: 'any'},
+                                                            {path: 'quota', targetType: 'any'}
+                                                        ],
+                                                        formatter: '.formatQuotaStatus'
+                                                    }"
+                                                    state="{
+                                                        parts: [
+                                                            {path: 'enrolled', targetType: 'any'},
+                                                            {path: 'quota', targetType: 'any'}
+                                                        ],
+                                                        formatter: '.formatQuotaState'
+                                                    }"/>
+                                                <Button 
+                                                    text="Enroll" 
+                                                    type="Emphasized"
+                                                    enabled="{
+                                                        parts: [
+                                                            {path: 'enrolled', targetType: 'any'},
+                                                            {path: 'quota', targetType: 'any'}
+                                                        ],
+                                                        formatter: '.formatEnrollEnabled'
+                                                    }"
+                                                    press=".onEnroll"/>
+                                            </cells>
+                                        </ColumnListItem>
+                                    </items>
+                                </Table>
+                            </VBox>
+                        </IconTabFilter>
+                        
+                        <!-- My Enrollments Tab -->
+                        <IconTabFilter text="My Enrollments" key="enrollments">
+                            <VBox class="sapUiSmallMargin">
+                                <Title text="My Enrolled Courses" level="H2" class="sapUiSmallMarginBottom"/>
+                                
+                                <Table
+                                    id="enrollmentTable"
+                                    items="{
+                                        path: '/MyEnrollments'
+                                    }">
+                                    <columns>
+                                        <Column width="15%">
+                                            <Text text="Course Code"/>
+                                        </Column>
+                                        <Column width="30%">
+                                            <Text text="Course Name"/>
+                                        </Column>
+                                        <Column width="10%">
+                                            <Text text="ECTS"/>
+                                        </Column>
+                                        <Column width="15%">
+                                            <Text text="Semester"/>
+                                        </Column>
+                                        <Column width="15%">
+                                            <Text text="Status"/>
+                                        </Column>
+                                        <Column width="10%">
+                                            <Text text="Grade"/>
+                                        </Column>
+                                    </columns>
+                                    <items>
+                                        <ColumnListItem>
+                                            <cells>
+                                                <Text text="{courseCode}"/>
+                                                <Text text="{courseName}"/>
+                                                <Text text="{ects}"/>
+                                                <Text text="{semester}"/>
+                                                <ObjectStatus 
+                                                    text="{status}"
+                                                    state="{parts: [{path: 'status', targetType: 'any'}], formatter: '.formatStatusState'}"/>
+                                                <Text text="{grade}"/>
+                                            </cells>
+                                        </ColumnListItem>
+                                    </items>
+                                </Table>
+                            </VBox>
+                        </IconTabFilter>
+
+                        <!-- Statistics Tab -->
+                        <IconTabFilter text="Statistics" key="statistics">
+                            <VBox class="sapUiSmallMargin">
+                                <Title text="Enrollment Statistics" level="H2" class="sapUiSmallMarginBottom"/>
+                                
+                                <!-- Course Capacity Chart -->
+                                <Panel headerText="Course Capacity Overview" class="sapUiResponsiveMargin">
+                                    <core:HTML content="&lt;div id='courseCapacityChart' style='width: 100%; height: 400px;'&gt;&lt;/div&gt;"/>
+                                </Panel>
+                                
+                                <!-- ECTS Distribution -->
+                                <Panel headerText="My ECTS Distribution" class="sapUiResponsiveMargin">
+                                    <core:HTML content="&lt;div id='ectsChart' style='width: 100%; height: 300px;'&gt;&lt;/div&gt;"/>
+                                </Panel>
+                                
+                                <!-- Enrollment Status -->
+                                <Panel headerText="Enrollment Status" class="sapUiResponsiveMargin">
+                                    <core:HTML content="&lt;div id='statusChart' style='width: 100%; height: 250px;'&gt;&lt;/div&gt;"/>
+                                </Panel>
+                            </VBox>
+                        </IconTabFilter>
+                    </items>
+                </IconTabBar>
+            </VBox>
+        </content>
+    </Page>
+</mvc:View>

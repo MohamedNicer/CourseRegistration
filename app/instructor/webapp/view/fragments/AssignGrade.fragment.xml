@@ -1,0 +1,51 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+    
+    <Dialog
+        id="assignGradeDialog"
+        title="Assign Grade"
+        contentWidth="400px">
+        <content>
+            <VBox class="sapUiSmallMargin">
+                <Label text="Student" class="sapUiTinyMarginBottom"/>
+                <Text text="{gradeModel>/studentName}" class="sapUiSmallMarginBottom"/>
+                
+                <Label text="Course" class="sapUiTinyMarginBottom"/>
+                <Text text="{gradeModel>/courseName}" class="sapUiSmallMarginBottom"/>
+                
+                <Label text="Grade (0-20)" required="true" class="sapUiTinyMarginTop"/>
+                <Input
+                    id="gradeInput"
+                    value="{gradeModel>/grade}"
+                    type="Number"
+                    placeholder="Enter grade (0-20)"
+                    required="true"
+                    class="sapUiSmallMarginBottom"/>
+                
+                <Label text="Status" class="sapUiTinyMarginTop"/>
+                <Select
+                    id="statusSelect"
+                    selectedKey="{gradeModel>/status}">
+                    <items>
+                        <core:Item key="ENROLLED" text="Enrolled"/>
+                        <core:Item key="COMPLETED" text="Completed"/>
+                        <core:Item key="FAILED" text="Failed"/>
+                        <core:Item key="WITHDRAWN" text="Withdrawn"/>
+                    </items>
+                </Select>
+            </VBox>
+        </content>
+        <beginButton>
+            <Button
+                text="Save"
+                type="Emphasized"
+                press=".onSaveGrade"/>
+        </beginButton>
+        <endButton>
+            <Button
+                text="Cancel"
+                press=".onCancelGrade"/>
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>
