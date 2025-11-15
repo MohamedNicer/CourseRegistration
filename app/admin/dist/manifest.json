@@ -1,0 +1,36 @@
+{
+	"_version": "1.59.0",
+	"sap.app": {
+		"id": "admin",
+		"type": "application",
+		"title": "Course Registration - Admin",
+		"description": "Manage students, instructors, courses, and enrollments",
+		"applicationVersion": {
+			"version": "1.0.0"
+		}
+	},
+	"sap.ui": {
+		"technology": "UI5",
+		"deviceTypes": {
+			"desktop": true,
+			"tablet": true,
+			"phone": true
+		}
+	},
+	"sap.ui5": {
+		"rootView": {
+			"viewName": "admin.view.Main",
+			"type": "XML",
+			"id": "main"
+		},
+		"dependencies": {
+			"minUI5Version": "1.120.0",
+			"libs": {
+				"sap.m": {},
+				"sap.ui.core": {},
+				"sap.ui.table": {}
+			}
+		},
+		"flexBundle": false
+	}
+}

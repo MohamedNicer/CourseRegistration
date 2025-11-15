@@ -1,0 +1,29 @@
+/* Fix body overflow issue */
+html, body {
+    height: 100%;
+    overflow: auto !important;
+}
+
+#content {
+    height: 100%;
+}
+
+/* Ensure UI5 content is visible */
+.sapUiBody {
+    background-color: #f5f5f5;
+}
+
+/* Fix for component container */
+[data-sap-ui-component] {
+    height: 100%;
+    display: block;
+}
+
+/* Ensure page content is visible */
+.sapMPage {
+    height: 100%;
+}
+
+.sapMPageBgStandard {
+    background-color: #f5f5f5;
+}

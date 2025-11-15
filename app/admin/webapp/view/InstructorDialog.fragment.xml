@@ -1,0 +1,54 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:f="sap.ui.layout.form">
+    
+    <Dialog
+        id="instructorDialog"
+        title="{dialogModel>/title}"
+        contentWidth="500px">
+        <content>
+            <f:SimpleForm
+                editable="true"
+                layout="ResponsiveGridLayout"
+                labelSpanXL="4"
+                labelSpanL="4"
+                labelSpanM="4"
+                labelSpanS="12"
+                adjustLabelSpan="false"
+                emptySpanXL="0"
+                emptySpanL="0"
+                emptySpanM="0"
+                emptySpanS="0"
+                columnsXL="1"
+                columnsL="1"
+                columnsM="1"
+                singleContainerFullSize="false">
+                <f:content>
+                    <Label text="Instructor ID" required="true"/>
+                    <Input id="instructorId" value="{dialogModel>/instructorId}" editable="false" required="true"/>
+                    
+                    <Label text="First Name" required="true"/>
+                    <Input id="firstName" value="{dialogModel>/firstName}" required="true"/>
+                    
+                    <Label text="Last Name" required="true"/>
+                    <Input id="lastName" value="{dialogModel>/lastName}" required="true"/>
+                    
+                    <Label text="Email" required="true"/>
+                    <Input id="email" value="{dialogModel>/email}" type="Email" required="true"/>
+                    
+                    <Label text="Department" required="true"/>
+                    <Select id="department" selectedKey="{dialogModel>/department_ID}" required="true" items="{departments>/}">
+                        <core:Item key="{departments>ID}" text="{departments>departmentName}" />
+                    </Select>
+                </f:content>
+            </f:SimpleForm>
+        </content>
+        <beginButton>
+            <Button text="Save" type="Emphasized" press=".onSaveInstructor"/>
+        </beginButton>
+        <endButton>
+            <Button text="Cancel" press=".onCancelDialog"/>
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

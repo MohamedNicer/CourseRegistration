@@ -4,166 +4,250 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Course Registration System</title>
+    
+    <!-- Load Auth0 SDK -->
+    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+    
+    <script>
+        // Auth0 Configuration
+        window.Auth0Config = {
+            domain: "dev-jgb23rzjcvzqvvnj.us.auth0.com",
+            clientId: "8DDdQBWPQcbEh1SPfp6IuDupaZ1S8o33",
+            redirectUri: window.location.origin + "/launchpad.html",
+            audience: "https://api.courseregistration.com",
+            scope: "openid profile email"
+        };
+    </script>
+    
     <script id="sap-ui-bootstrap"
         src="https://ui5.sap.com/1.120.0/resources/sap-ui-core.js"
         data-sap-ui-theme="sap_horizon"
-        data-sap-ui-libs="sap.m,sap.ui.core,sap.f"
-        data-sap-ui-resourceroots='{"shared": "./app/shared"}'>
+        data-sap-ui-libs="sap.m"
+        data-sap-ui-resourceroots='{
+            "shared": "./app/shared/"
+        }'
+        data-sap-ui-compatVersion="edge"
+        data-sap-ui-async="true">
     </script>
-    <script src="app/shared/auth/auth0-config.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .sapMPage {
+            background: transparent !important;
+        }
+        .launchpad-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 80vh;
+            padding: 2rem;
+        }
+        .launchpad-content {
+            background: white;
+            border-radius: 16px;
+            padding: 3rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 1000px;
+            width: 100%;
+        }
+        .welcome-header {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .welcome-subtext {
+            text-align: center;
+            color: #666;
+            margin-bottom: 2.5rem;
+        }
+        .portal-tile {
+            min-height: 180px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 12px;
+        }
+        .portal-tile:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.2);
+        }
+        .tile-container {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+    </style>
 </head>
 <body class="sapUiBody">
     <div id="content"></div>
     
     <script>
-        sap.ui.require([
-            "sap/m/App",
-            "sap/m/Page", 
-            "sap/m/TileContainer",
-            "sap/m/StandardTile",
-            "sap/m/Button",
-            "sap/m/MessageBox",
-            "shared/auth/auth-service"
-        ], function(App, Page, TileContainer, StandardTile, Button, MessageBox, AuthService) {
-            
-            async function initLaunchpad() {
+        sap.ui.getCore().attachInit(function() {
+            sap.ui.require([
+                "sap/m/App",
+                "sap/m/Page",
+                "sap/m/GenericTile",
+                "sap/m/TileContent",
+                "sap/m/ImageContent",
+                "sap/m/VBox",
+                "sap/m/Title",
+                "sap/m/Text",
+                "sap/m/FlexBox",
+                "sap/m/Button",
+                "shared/auth/auth-service"
+            ], async function(App, Page, GenericTile, TileContent, ImageContent, VBox, Title, Text, FlexBox, Button, AuthService) {
+                
+                console.log('Creating launchpad tiles...');
+                
+                // Initialize Auth0 and check authentication status
+                let isAuthenticated = false;
+                let userEmail = "";
+                
                 try {
-                    await AuthService.init();
-                    
-                    const isAuthenticated = await AuthService.isAuthenticated();
-                    
-                    if (!isAuthenticated) {
-                        showLoginPage();
-                        return;
+                    if (typeof window.AuthService !== 'undefined') {
+                        await window.AuthService.init();
+                        isAuthenticated = await window.AuthService.isAuthenticated();
+                        
+                        if (isAuthenticated) {
+                            const user = await window.AuthService.getUser();
+                            userEmail = user.email || "";
+                            console.log("User is authenticated:", userEmail);
+                        }
                     }
-                    
-                    const user = await AuthService.getUser();
-                    showMainLaunchpad(user);
-                    
                 } catch (error) {
-                    console.error("Auth initialization failed:", error);
-                    showLoginPage();
+                    console.error("Auth initialization error:", error);
                 }
-            }
-            
-            function showLoginPage() {
-                const loginPage = new Page({
-                    title: "Course Registration System",
-                    content: [
-                        new sap.m.VBox({
-                            alignItems: "Center",
-                            justifyContent: "Center",
-                            class: "sapUiLargeMargin",
-                            items: [
-                                new sap.m.Title({
-                                    text: "Welcome to Course Registration",
-                                    level: "H1"
-                                }),
-                                new sap.m.Text({
-                                    text: "Please login to access the system",
-                                    class: "sapUiMediumMarginTop"
-                                }),
-                                new Button({
-                                    text: "Login",
-                                    type: "Emphasized",
-                                    press: function() {
-                                        AuthService.login();
-                                    },
-                                    class: "sapUiLargeMarginTop"
-                                })
-                            ]
+                
+                // Create logout button (only visible if authenticated)
+                var logoutButton = new Button({
+                    text: "Logout",
+                    icon: "sap-icon://log",
+                    type: "Transparent",
+                    visible: isAuthenticated,
+                    press: async function() {
+                        if (typeof window.AuthService !== 'undefined') {
+                            await window.AuthService.logout();
+                        }
+                    }
+                });
+                
+                // Create Student Portal Tile with icon
+                var studentTile = new GenericTile({
+                    header: "Student Portal",
+                    subheader: "Course Registration & Profile",
+                    frameType: "TwoByOne",
+                    press: function() {
+                        console.log('Student portal clicked');
+                        window.location.href = "app/student/webapp/index.html";
+                    },
+                    tileContent: [
+                        new TileContent({
+                            content: new ImageContent({
+                                src: "sap-icon://education"
+                            })
                         })
                     ]
                 });
+                studentTile.addStyleClass("sapUiTinyMargin portal-tile");
                 
-                const app = new App({
-                    pages: [loginPage]
-                });
-                
-                app.placeAt("content");
-            }
-            
-            function showMainLaunchpad(user) {
-                const userRole = user['custom:role'] || 'student'; // Get role from Auth0
-                
-                const tiles = [];
-                
-                // Student tile
-                if (userRole === 'student' || userRole === 'admin') {
-                    tiles.push(new StandardTile({
-                        icon: "sap-icon://education",
-                        title: "Student Portal",
-                        info: "Course Registration & Profile",
-                        press: function() {
-                            window.location.href = "app/student/webapp/index.html";
-                        }
-                    }));
-                }
-                
-                // Instructor tile
-                if (userRole === 'instructor' || userRole === 'admin') {
-                    tiles.push(new StandardTile({
-                        icon: "sap-icon://person-placeholder",
-                        title: "Instructor Portal", 
-                        info: "Grade Management",
-                        press: function() {
-                            window.location.href = "app/instructor/webapp/index.html";
-                        }
-                    }));
-                }
-                
-                // Admin tile
-                if (userRole === 'admin') {
-                    tiles.push(new StandardTile({
-                        icon: "sap-icon://settings",
-                        title: "Admin Portal",
-                        info: "System Management",
-                        press: function() {
-                            window.location.href = "app/admin/webapp/index.html";
-                        }
-                    }));
-                }
-                
-                const launchpadPage = new Page({
-                    title: "Course Registration System",
-                    content: [
-                        new sap.m.VBox({
-                            class: "sapUiMediumMargin",
-                            items: [
-                                new sap.m.HBox({
-                                    justifyContent: "SpaceBetween",
-                                    alignItems: "Center",
-                                    class: "sapUiMediumMarginBottom",
-                                    items: [
-                                        new sap.m.Title({
-                                            text: "Welcome, " + user.name,
-                                            level: "H2"
-                                        }),
-                                        new Button({
-                                            text: "Logout",
-                                            press: function() {
-                                                AuthService.logout();
-                                            }
-                                        })
-                                    ]
-                                }),
-                                new TileContainer({
-                                    tiles: tiles
-                                })
-                            ]
+                // Create Instructor Portal Tile with icon
+                var instructorTile = new GenericTile({
+                    header: "Instructor Portal",
+                    subheader: "Grade Management",
+                    frameType: "TwoByOne",
+                    press: function() {
+                        console.log('Instructor portal clicked');
+                        window.location.href = "app/instructor/webapp/index.html";
+                    },
+                    tileContent: [
+                        new TileContent({
+                            content: new ImageContent({
+                                src: "sap-icon://person-placeholder"
+                            })
                         })
                     ]
                 });
+                instructorTile.addStyleClass("sapUiTinyMargin portal-tile");
                 
-                const app = new App({
-                    pages: [launchpadPage]
+                // Create Admin Portal Tile with icon
+                var adminTile = new GenericTile({
+                    header: "Admin Portal",
+                    subheader: "System Management",
+                    frameType: "TwoByOne",
+                    press: function() {
+                        console.log('Admin portal clicked');
+                        window.location.href = "app/admin/webapp/index.html";
+                    },
+                    tileContent: [
+                        new TileContent({
+                            content: new ImageContent({
+                                src: "sap-icon://settings"
+                            })
+                        })
+                    ]
+                });
+                adminTile.addStyleClass("sapUiTinyMargin portal-tile");
+                
+                // Create title with custom styling
+                var welcomeTitle = new Title({
+                    text: isAuthenticated ? `Welcome, ${userEmail}` : "Welcome to Course Registration",
+                    level: "H1"
+                });
+                welcomeTitle.addStyleClass("welcome-header");
+                
+                // Create subtitle
+                var welcomeText = new Text({
+                    text: isAuthenticated ? "Select a portal to continue" : "Select a portal to continue. You will be asked to login if required."
+                });
+                welcomeText.addStyleClass("welcome-subtext");
+                
+                // Create FlexBox for tiles with center alignment
+                var tileBox = new FlexBox({
+                    wrap: "Wrap",
+                    justifyContent: "Center",
+                    alignItems: "Center",
+                    items: [studentTile, instructorTile, adminTile]
+                });
+                tileBox.addStyleClass("tile-container");
+                
+                // Create content wrapper
+                var contentWrapper = new VBox({
+                    alignItems: "Center",
+                    items: [
+                        welcomeTitle,
+                        welcomeText,
+                        tileBox
+                    ]
+                });
+                contentWrapper.addStyleClass("launchpad-content");
+                
+                // Create outer wrapper for centering
+                var outerWrapper = new FlexBox({
+                    justifyContent: "Center",
+                    alignItems: "Center",
+                    items: [contentWrapper]
+                });
+                outerWrapper.addStyleClass("launchpad-wrapper");
+                
+                // Create page
+                var page = new Page({
+                    title: "Course Registration System",
+                    showHeader: true,
+                    showNavButton: false,
+                    content: [outerWrapper],
+                    headerContent: [logoutButton]
+                });
+                
+                // Create app
+                var app = new App({
+                    pages: [page]
                 });
                 
                 app.placeAt("content");
-            }
-            
-            // Initialize the launchpad
-            initLaunchpad();
+                
+                console.log('Launchpad created successfully');
+            });
         });
     </script>
 </body>

@@ -3,8 +3,8 @@
     "sap.app": {
         "id": "admin",
         "type": "application",
-        "title": "System Administration",
-        "description": "Manage all courses, students, and instructors",
+        "title": "Course Registration - Admin",
+        "description": "Manage students, instructors, courses, and enrollments",
         "applicationVersion": {
             "version": "1.0.0"
         }
@@ -29,16 +29,6 @@
                 "sap.m": {},
                 "sap.ui.core": {},
                 "sap.ui.table": {}
-            }
-        },
-        "models": {
-            "": {
-                "type": "sap.ui.model.odata.v4.ODataModel",
-                "settings": {
-                    "serviceUrl": "/admin/",
-                    "synchronizationMode": "None",
-                    "operationMode": "Server"
-                }
             }
         }
     }

@@ -1,0 +1,40 @@
+/* Instructor Portal Styles */
+
+/* Force view to display */
+#mainView {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.instructorHeader {
+    background-color: #0854a0;
+    color: white;
+    padding: 1rem;
+}
+
+.instructorTitle {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.courseTable,
+.enrollmentTable {
+    margin-top: 1rem;
+}
+
+.gradeInput {
+    width: 80px;
+}
+
+.statusSuccess {
+    color: #107e3e;
+}
+
+.statusWarning {
+    color: #e9730c;
+}
+
+.statusError {
+    color: #bb0000;
+}

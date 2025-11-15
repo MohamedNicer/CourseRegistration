@@ -7,25 +7,46 @@
 schema*.sql
 default-env.json
 
-**/bin/
+# Build artifacts
 **/target/
-.flattened-pom.xml
-.classpath
-.project
-.settings
 
+# Node modules
 **/node/
 **/node_modules/
 
+# MTA build artifacts (if you add MTA back later)
 **/.mta/
 *.mtar
+mta_archives/
+resources/
+
+
 
 *.log*
-gc_history*
-hs_err*
 *.tgz
-*.iml
 
 .vscode
 .idea
 .reloadtrigger
+
+# Generated JavaScript from TypeScript
+srv/*.js
+srv/*.js.map
+app/*/webapp/**/*.js
+app/*/webapp/**/*.js.map
+app/*/webapp/Component-preload.js
+!app/*/webapp/index.js
+
+# Backup folders
+app_old_backup/
+
+# Database files
+db.sqlite
+db.sqlite-wal
+db.sqlite-shm
+
+# Kiro specs (optional - remove if you want to share specs)
+.kiro/
+
+# Qodo agents (optional - remove if you want to share)
+.qodo/

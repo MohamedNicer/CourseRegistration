@@ -1,0 +1,75 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:f="sap.ui.layout.form">
+    
+    <Dialog
+        id="courseDialog"
+        title="{dialogModel>/title}"
+        contentWidth="600px">
+        <content>
+            <f:SimpleForm
+                editable="true"
+                layout="ResponsiveGridLayout"
+                labelSpanXL="4"
+                labelSpanL="4"
+                labelSpanM="4"
+                labelSpanS="12"
+                adjustLabelSpan="false"
+                emptySpanXL="0"
+                emptySpanL="0"
+                emptySpanM="0"
+                emptySpanS="0"
+                columnsXL="1"
+                columnsL="1"
+                columnsM="1"
+                singleContainerFullSize="false">
+                <f:content>
+                    <Label text="Department" required="true"/>
+                    <Select id="courseDepartment" selectedKey="{dialogModel>/department_ID}" required="true" change=".onCourseDepartmentChange" items="{departments>/}">
+                        <core:Item key="{departments>ID}" text="{departments>departmentName}" />
+                    </Select>
+                    
+                    <Label text="Course Code" required="true"/>
+                    <Input id="courseCode" value="{dialogModel>/courseCode}" editable="false" required="true"/>
+                    
+                    <Label text="Course Name" required="true"/>
+                    <Input id="courseName" value="{dialogModel>/courseName}" required="true"/>
+                    
+                    <Label text="Description"/>
+                    <TextArea id="description" value="{dialogModel>/description}" rows="3"/>
+                    
+                    <Label text="ECTS Credits" required="true"/>
+                    <Input id="ects" value="{dialogModel>/ects}" type="Number" required="true"/>
+                    
+                    <Label text="Semester" required="true"/>
+                    <Select id="semester" selectedKey="{dialogModel>/semester}" required="true">
+                        <items>
+                            <core:Item key="Fall 2025" text="Fall 2025" />
+                            <core:Item key="Spring 2026" text="Spring 2026" />
+                            <core:Item key="Fall 2026" text="Fall 2026" />
+                            <core:Item key="Spring 2027" text="Spring 2027" />
+                        </items>
+                    </Select>
+                    
+                    <Label text="Instructor" required="true"/>
+                    <Select id="instructor" selectedKey="{dialogModel>/instructor_ID}" required="true" items="{instructors>/}">
+                        <core:Item key="{instructors>ID}" text="{instructors>firstName} {instructors>lastName}" />
+                    </Select>
+                    
+                    <Label text="Quota" required="true"/>
+                    <Input id="quota" value="{dialogModel>/quota}" type="Number" required="true"/>
+                    
+                    <Label text="Active"/>
+                    <Switch id="isActive" state="{dialogModel>/isActive}"/>
+                </f:content>
+            </f:SimpleForm>
+        </content>
+        <beginButton>
+            <Button text="Save" type="Emphasized" press=".onSaveCourse"/>
+        </beginButton>
+        <endButton>
+            <Button text="Cancel" press=".onCancelDialog"/>
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

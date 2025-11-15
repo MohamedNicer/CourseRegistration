@@ -3,8 +3,8 @@
     "sap.app": {
         "id": "instructor",
         "type": "application",
-        "title": "Course Management - Instructor",
-        "description": "Manage courses and view enrollments",
+        "title": "Course Registration - Instructor",
+        "description": "Manage courses and enrollments",
         "applicationVersion": {
             "version": "1.0.0"
         }
@@ -29,16 +29,6 @@
                 "sap.m": {},
                 "sap.ui.core": {},
                 "sap.ui.table": {}
-            }
-        },
-        "models": {
-            "": {
-                "type": "sap.ui.model.odata.v4.ODataModel",
-                "settings": {
-                    "serviceUrl": "/instructor/",
-                    "synchronizationMode": "None",
-                    "operationMode": "Server"
-                }
             }
         }
     }

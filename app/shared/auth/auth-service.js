@@ -10,37 +10,33 @@ sap.ui.define([], function() {
                 return Promise.resolve();
             }
             
-            return new Promise((resolve, reject) => {
-                // Load Auth0 SDK
-                const script = document.createElement('script');
-                script.src = 'https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js';
-                script.onload = async () => {
-                    try {
-                        this._auth0 = await auth0.createAuth0Client({
-                            domain: window.Auth0Config.domain,
-                            clientId: window.Auth0Config.clientId,
-                            authorizationParams: {
-                                redirect_uri: window.Auth0Config.redirectUri,
-                                audience: window.Auth0Config.audience,
-                                scope: window.Auth0Config.scope
-                            }
-                        });
-                        
-                        this._isInitialized = true;
-                        
-                        // Check if user is returning from login
-                        if (location.search.includes('code=')) {
-                            await this._auth0.handleRedirectCallback();
-                            window.history.replaceState({}, document.title, window.location.pathname);
-                        }
-                        
-                        resolve();
-                    } catch (error) {
-                        reject(error);
+            return new Promise(async (resolve, reject) => {
+                try {
+                    // Auth0 SDK is loaded in index.html
+                    this._auth0 = await window.auth0.createAuth0Client({
+                        domain: window.Auth0Config.domain,
+                        clientId: window.Auth0Config.clientId,
+                        authorizationParams: {
+                            redirect_uri: window.Auth0Config.redirectUri,
+                            audience: window.Auth0Config.audience,
+                            scope: window.Auth0Config.scope
+                        },
+                        cacheLocation: 'localstorage',
+                        useRefreshTokens: true
+                    });
+                    
+                    this._isInitialized = true;
+                    
+                    // Check if user is returning from login
+                    if (location.search.includes('code=')) {
+                        await this._auth0.handleRedirectCallback();
+                        window.history.replaceState({}, document.title, window.location.pathname);
                     }
-                };
-                script.onerror = reject;
-                document.head.appendChild(script);
+                    
+                    resolve();
+                } catch (error) {
+                    reject(error);
+                }
             });
         },
         
@@ -80,6 +76,9 @@ sap.ui.define([], function() {
             }
         }
     };
+    
+    // Expose globally for easy access
+    window.AuthService = AuthService;
     
     return AuthService;
 });

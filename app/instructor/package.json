@@ -1,0 +1,19 @@
+{
+  "name": "instructor-portal",
+  "version": "1.0.0",
+  "description": "Instructor Portal - Course Registration System",
+  "scripts": {
+    "build": "ui5 build --clean-dest",
+    "watch": "ui5 serve",
+    "clean": "rimraf dist"
+  },
+  "devDependencies": {
+    "@ui5/cli": "^4.0.34",
+    "rimraf": "^5.0.5"
+  },
+  "ui5": {
+    "dependencies": [
+      "@sapui5/distribution-metadata"
+    ]
+  }
+}

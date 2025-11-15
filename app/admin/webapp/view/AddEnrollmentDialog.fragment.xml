@@ -1,0 +1,98 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:form="sap.ui.layout.form">
+    
+    <Dialog
+        title="Add New Enrollment"
+        contentWidth="600px">
+        <content>
+            <form:SimpleForm
+                editable="true"
+                layout="ResponsiveGridLayout"
+                labelSpanXL="4"
+                labelSpanL="4"
+                labelSpanM="4"
+                labelSpanS="12"
+                adjustLabelSpan="false"
+                emptySpanXL="0"
+                emptySpanL="0"
+                emptySpanM="0"
+                emptySpanS="0"
+                columnsXL="1"
+                columnsL="1"
+                columnsM="1"
+                singleContainerFullSize="false">
+                <form:content>
+                    <!-- Student Selection -->
+                    <Label text="Student" required="true"/>
+                    <Select
+                        id="enrollmentStudent"
+                        selectedKey="{dialogModel>/student_ID}"
+                        required="true"
+                        change=".onEnrollmentStudentChange"
+                        items="{students>/}">
+                        <core:Item 
+                            key="{students>ID}" 
+                            text="{students>studentNumber} - {students>firstName} {students>lastName}" />
+                    </Select>
+                    
+                    <!-- Student Info Display -->
+                    <Label text="Student ECTS Info"/>
+                    <Text text="{dialogModel>/studentEctsInfo}" class="sapUiSmallMarginBottom"/>
+                    
+                    <!-- Course Selection -->
+                    <Label text="Course" required="true"/>
+                    <Select
+                        id="enrollmentCourse"
+                        selectedKey="{dialogModel>/course_ID}"
+                        required="true"
+                        change=".onEnrollmentCourseChange"
+                        items="{courses>/}">
+                        <core:Item 
+                            key="{courses>ID}" 
+                            text="{courses>courseCode} - {courses>courseName} ({courses>ects} ECTS)" />
+                    </Select>
+                    
+                    <!-- Course Info Display -->
+                    <Label text="Course Capacity"/>
+                    <Text text="{dialogModel>/courseCapacityInfo}" class="sapUiSmallMarginBottom"/>
+                    
+                    <!-- Validation Messages -->
+                    <Label text="Validation"/>
+                    <VBox>
+                        <MessageStrip
+                            text="{dialogModel>/validationMessage}"
+                            type="{dialogModel>/validationType}"
+                            visible="{dialogModel>/showValidation}"
+                            showIcon="true"
+                            class="sapUiSmallMarginBottom"/>
+                    </VBox>
+                    
+                    <!-- Optional Grade -->
+                    <Label text="Grade (Optional)"/>
+                    <Input
+                        value="{dialogModel>/grade}"
+                        type="Number"
+                        placeholder="Leave empty for ENROLLED status"
+                        change=".onEnrollmentGradeChange"
+                        width="100%"/>
+                    
+                    <!-- Computed Status Display -->
+                    <Label text="Status"/>
+                    <Text text="{dialogModel>/status}" class="sapUiSmallMarginBottom"/>
+                </form:content>
+            </form:SimpleForm>
+        </content>
+        <beginButton>
+            <Button 
+                text="Enroll" 
+                type="Emphasized" 
+                press=".onSaveNewEnrollment"
+                enabled="{dialogModel>/canEnroll}"/>
+        </beginButton>
+        <endButton>
+            <Button text="Cancel" press=".onCancelDialog"/>
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

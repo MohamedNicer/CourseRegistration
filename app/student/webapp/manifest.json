@@ -30,16 +30,6 @@
                 "sap.ui.core": {},
                 "sap.ui.table": {}
             }
-        },
-        "models": {
-            "": {
-                "type": "sap.ui.model.odata.v4.ODataModel",
-                "settings": {
-                    "serviceUrl": "/student/",
-                    "synchronizationMode": "None",
-                    "operationMode": "Server"
-                }
-            }
         }
     }
 }
