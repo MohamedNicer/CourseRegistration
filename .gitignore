@@ -29,9 +29,9 @@ resources/
 .idea
 .reloadtrigger
 
-# Generated JavaScript from TypeScript
-srv/*.js
-srv/*.js.map
+# Generated JavaScript from TypeScript (now included for SAP BAS deployment)
+# srv/*.js
+# srv/*.js.map
 app/*/webapp/**/*.js
 app/*/webapp/**/*.js.map
 app/*/webapp/Component-preload.js
