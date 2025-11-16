@@ -184,7 +184,3 @@ The application automatically:
 ## 📄 License
 
 ISC
-
----
-
-**Built with ❤️ for university course management**

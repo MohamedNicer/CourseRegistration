@@ -47,10 +47,6 @@ db.sqlite-wal
 db.sqlite-shm
 .db-initialized
 
-# IDE and tool directories
-.kiro/
-.qodo/
-scripts/
 
 # Test and debug files
 test-*.js
