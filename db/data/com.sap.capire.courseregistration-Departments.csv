@@ -1,3 +1,9 @@
 ID;departmentName;faculty;university_ID
 1;Computer Science;Engineering;1
 2;Business Administration;Business;1
+3;Mathematics;Science;1
+4;Psychology;Social Sciences;1
+5;Mechanical Engineering;Engineering;1
+6;Economics;Business;1
+7;Physics;Science;1
+8;English Literature;Arts & Humanities;1

@@ -1,14 +1,15 @@
 {
   "requires": {
-    "[production]": {
-      "auth": "xsuaa",
-      "multitenancy": true
+    "db": {
+      "kind": "sqlite"
     },
-    "db": "hana",
-    "application-logging": true
-  },
-  "profiles": [
-    "with-mtx-sidecar",
-    "java"
-  ]
+    "[production]": {
+      "db": {
+        "kind": "sqlite"
+      },
+      "auth": {
+        "kind": "dummy"
+      }
+    }
+  }
 }

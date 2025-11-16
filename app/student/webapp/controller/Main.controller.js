@@ -112,9 +112,12 @@ sap.ui.define([
                 }
                 
                 const token = await window.AuthService.getToken();
+                const user = await window.AuthService.getUser();
                 const response = await fetch("/student/MyProfile", {
                     headers: {
-                        "Authorization": "Bearer " + token
+                        "Authorization": "Bearer " + token,
+                        "X-User-Email": user.email,
+                        "X-User-Role": user['https://courseregistration.com/role'] || user['custom:role'] || user.role || 'student'
                     }
                 });
                 
@@ -164,10 +167,13 @@ sap.ui.define([
         _calculateECTS: async function () {
             try {
                 const token = await window.AuthService.getToken();
+                const user = await window.AuthService.getUser();
                 const url = "/student/MyEnrollments?$expand=course";
                 const response = await fetch(url, {
                     headers: {
-                        "Authorization": "Bearer " + token
+                        "Authorization": "Bearer " + token,
+                        "X-User-Email": user.email,
+                        "X-User-Role": user['https://courseregistration.com/role'] || user['custom:role'] || user.role || 'student'
                     }
                 });
                 
@@ -217,11 +223,14 @@ sap.ui.define([
                 }
                 
                 const token = await window.AuthService.getToken();
+                const user = await window.AuthService.getUser();
                 const url = "/student/AvailableCourses";
                 console.log("Fetching from URL:", url);
                 const response = await fetch(url, {
                     headers: {
-                        "Authorization": "Bearer " + token
+                        "Authorization": "Bearer " + token,
+                        "X-User-Email": user.email,
+                        "X-User-Role": user['https://courseregistration.com/role'] || user['custom:role'] || user.role || 'student'
                     }
                 });
                 
@@ -274,11 +283,14 @@ sap.ui.define([
                 }
                 
                 const token = await window.AuthService.getToken();
+                const user = await window.AuthService.getUser();
                 const url = "/student/MyEnrollments";
                 console.log("Fetching from URL:", url);
                 const response = await fetch(url, {
                     headers: {
-                        "Authorization": "Bearer " + token
+                        "Authorization": "Bearer " + token,
+                        "X-User-Email": user.email,
+                        "X-User-Role": user['https://courseregistration.com/role'] || user['custom:role'] || user.role || 'student'
                     }
                 });
                 
@@ -320,15 +332,24 @@ sap.ui.define([
                 console.log("Loading statistics...");
                 
                 const token = await window.AuthService.getToken();
+                const user = await window.AuthService.getUser();
                 
                 // For statistics, we need ALL courses from the student's department, not just available ones
                 // So we fetch from MyEnrollments to get enrolled courses, then combine with AvailableCourses
                 const [availableCoursesResponse, enrollmentsResponse] = await Promise.all([
                     fetch("/student/AvailableCourses", {
-                        headers: { "Authorization": "Bearer " + token }
+                        headers: { 
+                            "Authorization": "Bearer " + token,
+                            "X-User-Email": user.email,
+                            "X-User-Role": user['https://courseregistration.com/role'] || user['custom:role'] || user.role || 'student'
+                        }
                     }),
                     fetch("/student/MyEnrollments", {
-                        headers: { "Authorization": "Bearer " + token }
+                        headers: { 
+                            "Authorization": "Bearer " + token,
+                            "X-User-Email": user.email,
+                            "X-User-Role": user['https://courseregistration.com/role'] || user['custom:role'] || user.role || 'student'
+                        }
                     })
                 ]);
                 
@@ -359,26 +380,42 @@ sap.ui.define([
                 const enrollmentsData = await enrollmentsResponse.json();
                 
                 console.log("Statistics - Available courses data:", availableCoursesData);
+                console.log("Statistics - Available courses count:", availableCoursesData.value ? availableCoursesData.value.length : 0);
                 console.log("Statistics - Enrollments data:", enrollmentsData);
+                console.log("Statistics - Enrollments count:", enrollmentsData.value ? enrollmentsData.value.length : 0);
                 
                 // Combine available courses with enrolled courses for complete statistics
                 const allCourses = [...(availableCoursesData.value || [])];
                 
                 // Add enrolled courses that might not be in available courses
-                if (enrollmentsData.value) {
-                    enrollmentsData.value.forEach(enrollment => {
-                        if (enrollment.course) {
-                            // Check if course is already in allCourses
-                            const exists = allCourses.find(c => c.ID === enrollment.course.ID);
-                            if (!exists) {
-                                allCourses.push(enrollment.course);
+                // Need to expand course data in enrollments
+                const enrollmentsWithCoursesResponse = await fetch("/student/MyEnrollments?$expand=course", {
+                    headers: { 
+                        "Authorization": "Bearer " + token,
+                        "X-User-Email": user.email,
+                        "X-User-Role": user['https://courseregistration.com/role'] || user['custom:role'] || user.role || 'student'
+                    }
+                });
+                
+                if (enrollmentsWithCoursesResponse.ok) {
+                    const enrollmentsWithCoursesData = await enrollmentsWithCoursesResponse.json();
+                    console.log("Statistics - Enrollments with courses:", enrollmentsWithCoursesData);
+                    
+                    if (enrollmentsWithCoursesData.value) {
+                        enrollmentsWithCoursesData.value.forEach(enrollment => {
+                            if (enrollment.course) {
+                                // Check if course is already in allCourses
+                                const exists = allCourses.find(c => c.ID === enrollment.course.ID);
+                                if (!exists) {
+                                    allCourses.push(enrollment.course);
+                                }
                             }
-                        }
-                    });
+                        });
+                    }
                 }
                 
-                console.log("Statistics - Combined courses array:", allCourses);
-                console.log("Statistics - Combined courses array length:", allCourses.length);
+                console.log("Statistics - Final courses array:", allCourses);
+                console.log("Statistics - Final courses array length:", allCourses.length);
                 
                 // Render charts with a small delay to ensure DOM is ready
                 setTimeout(() => {
@@ -394,20 +431,26 @@ sap.ui.define([
         },
 
         _renderCourseCapacityChart: function (courses) {
+            console.log("_renderCourseCapacityChart called with courses:", courses);
+            console.log("Courses type:", typeof courses, "Is array:", Array.isArray(courses), "Length:", courses ? courses.length : 'N/A');
+            
             const ctx = document.getElementById('courseCapacityChart');
             if (!ctx) {
                 console.error("Course capacity chart canvas not found");
                 return;
             }
             
+            console.log("Canvas element found:", ctx);
+            
             // Destroy existing chart if it exists
             if (this._charts.courseCapacity) {
+                console.log("Destroying existing chart");
                 this._charts.courseCapacity.destroy();
             }
             
             // Check if courses array is valid
             if (!courses || !Array.isArray(courses) || courses.length === 0) {
-                console.warn("No courses data available for chart");
+                console.warn("No courses data available for chart - courses:", courses);
                 // Create empty chart with message
                 this._charts.courseCapacity = new Chart(ctx, {
                     type: 'bar',
@@ -428,6 +471,8 @@ sap.ui.define([
                 });
                 return;
             }
+            
+            console.log("Valid courses array with", courses.length, "courses");
             
             // Prepare data - show top 10 courses by enrollment
             const sortedCourses = courses
@@ -630,11 +675,42 @@ sap.ui.define([
                     return;
                 }
                 
-                // Disable the button and show busy indicator during enrollment
-                oButton.setEnabled(false);
-                oButton.setBusy(true);
+                // Build confirmation message
+                let confirmMessage = `Are you sure you want to enroll in this course?\n\n`;
+                confirmMessage += `Course: ${oCourse.courseName} (${oCourse.courseCode})\n`;
+                confirmMessage += `ECTS: ${courseEcts}\n`;
+                confirmMessage += `Instructor: ${oCourse.instructor?.firstName} ${oCourse.instructor?.lastName}\n`;
+                confirmMessage += `Semester: ${oCourse.semester}\n\n`;
+                confirmMessage += `Available ECTS after enrollment: ${ectsAvailable - courseEcts} / ${oProfileModel.getProperty("/ectsLimit")}\n`;
+                confirmMessage += `Course availability: ${oCourse.enrolled + 1} / ${oCourse.quota} enrolled`;
                 
+                // Show confirmation dialog
+                MessageBox.confirm(confirmMessage, {
+                    title: "Confirm Enrollment",
+                    actions: [MessageBox.Action.OK, MessageBox.Action.CANCEL],
+                    onClose: async (sAction) => {
+                        if (sAction !== MessageBox.Action.OK) {
+                            return;
+                        }
+                        
+                        // Disable the button and show busy indicator during enrollment
+                        oButton.setEnabled(false);
+                        oButton.setBusy(true);
+                        
+                        await this._performEnrollment(oCourse, oButton);
+                    }
+                });
+                
+            } catch (error) {
+                console.error("Failed to enroll:", error);
+                MessageBox.error(`Failed to enroll: ${error.message}`);
+            }
+        },
+        
+        _performEnrollment: async function(oCourse, oButton) {
+            try {
                 const token = await window.AuthService.getToken();
+                const user = await window.AuthService.getUser();
                 
                 // Create enrollment using admin service (POST to /admin/Enrollments)
                 const enrollmentData = {
@@ -646,6 +722,8 @@ sap.ui.define([
                     method: "POST",
                     headers: {
                         "Authorization": "Bearer " + token,
+                        "X-User-Email": user.email,
+                        "X-User-Role": user['https://courseregistration.com/role'] || user['custom:role'] || user.role || 'student',
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify(enrollmentData)

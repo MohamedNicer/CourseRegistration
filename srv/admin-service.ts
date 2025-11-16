@@ -40,6 +40,27 @@ export default cds.service.impl(async function(this: any) {
         const userEmail = getUserEmail(req);
         const count = Array.isArray(results) ? results.length : (results ? 1 : 0);
         console.log(`[AdminService] Courses READ completed - Admin: ${userEmail}, Records returned: ${count}`);
+        
+        // Dynamically calculate enrolled count for each course to ensure accuracy
+        if (results) {
+            const courses = Array.isArray(results) ? results : [results];
+            const { SELECT } = cds.ql;
+            
+            for (const course of courses) {
+                if (course.ID) {
+                    // Count current enrollments with status ENROLLED
+                    const enrolledCount = await SELECT.from(Enrollments)
+                        .where({ course_ID: course.ID })
+                        .and({ status: 'ENROLLED' });
+                    
+                    // Update the course object with the live count
+                    course.enrolled = enrolledCount.length;
+                    
+                    // Also update the database to keep it in sync
+                    await cds.update(Courses).set({ enrolled: enrolledCount.length }).where({ ID: course.ID });
+                }
+            }
+        }
     });
 
     this.after('READ', Enrollments, async (results: any, req: any) => {
@@ -81,34 +102,80 @@ export default cds.service.impl(async function(this: any) {
         console.log(`[AUDIT] Admin ${userEmail} DELETED record from ${targetEntity}`);
     });
 
-    // Before enrollment update - automatically set status based on grade
+    // Before enrollment update - automatically set status based on grade and capture course_ID
     this.before('UPDATE', Enrollments, async (req: any) => {
         const { SELECT } = cds.ql;
         
-        // Check if grade is being updated
-        if (req.data.grade !== undefined && req.data.grade !== null) {
-            const grade = parseFloat(req.data.grade);
-            console.log(`[AdminService] Enrollments UPDATE - Grade entered: ${grade}`);
-            
-            // Automatically set status based on grade
-            if (grade >= 18) {
-                req.data.status = 'EXCELLENT';
-                console.log(`[AdminService] Auto-setting status to EXCELLENT (grade >= 18)`);
-            } else if (grade >= 16) {
-                req.data.status = 'VERY_GOOD';
-                console.log(`[AdminService] Auto-setting status to VERY_GOOD (grade >= 16)`);
-            } else if (grade >= 14) {
-                req.data.status = 'GOOD';
-                console.log(`[AdminService] Auto-setting status to GOOD (grade >= 14)`);
-            } else if (grade >= 12) {
-                req.data.status = 'SATISFACTORY';
-                console.log(`[AdminService] Auto-setting status to SATISFACTORY (grade >= 12)`);
-            } else if (grade >= 10) {
-                req.data.status = 'PASSED';
-                console.log(`[AdminService] Auto-setting status to PASSED (grade >= 10)`);
+        // Get the enrollment to capture course_ID and old status for later use
+        const enrollmentId = req.data.ID;
+        const enrollment = await SELECT.one.from(Enrollments).where({ ID: enrollmentId });
+        
+        if (enrollment) {
+            req._courseId = enrollment.course_ID;
+            req._oldStatus = enrollment.status;
+        }
+        
+        // Check if grade is being updated or cleared
+        console.log(`[AdminService] Enrollments UPDATE - req.data:`, JSON.stringify(req.data));
+        
+        if (req.data.grade !== undefined) {
+            if (req.data.grade === null || req.data.grade === '' || req.data.grade === 0) {
+                // Grade is being cleared - revert to ENROLLED status and ensure grade is null
+                req.data.status = 'ENROLLED';
+                req.data.grade = null;
+                console.log(`[AdminService] Enrollments UPDATE - Grade cleared (was: ${req.data.grade}), reverting status to ENROLLED`);
             } else {
-                req.data.status = 'FAILED';
-                console.log(`[AdminService] Auto-setting status to FAILED (grade < 10)`);
+                const grade = parseFloat(req.data.grade);
+                
+                // Check if grade is a valid number
+                if (isNaN(grade)) {
+                    console.log(`[AdminService] Enrollments UPDATE - Invalid grade value: ${req.data.grade}, reverting to ENROLLED`);
+                    req.data.status = 'ENROLLED';
+                    req.data.grade = null;
+                } else {
+                    console.log(`[AdminService] Enrollments UPDATE - Grade entered: ${grade}`);
+                    
+                    // Automatically set status based on grade
+                    if (grade >= 18) {
+                        req.data.status = 'EXCELLENT';
+                        console.log(`[AdminService] Auto-setting status to EXCELLENT (grade >= 18)`);
+                    } else if (grade >= 16) {
+                        req.data.status = 'VERY_GOOD';
+                        console.log(`[AdminService] Auto-setting status to VERY_GOOD (grade >= 16)`);
+                    } else if (grade >= 14) {
+                        req.data.status = 'GOOD';
+                        console.log(`[AdminService] Auto-setting status to GOOD (grade >= 14)`);
+                    } else if (grade >= 12) {
+                        req.data.status = 'SATISFACTORY';
+                        console.log(`[AdminService] Auto-setting status to SATISFACTORY (grade >= 12)`);
+                    } else if (grade >= 10) {
+                        req.data.status = 'PASSED';
+                        console.log(`[AdminService] Auto-setting status to PASSED (grade >= 10)`);
+                    } else {
+                        req.data.status = 'FAILED';
+                        console.log(`[AdminService] Auto-setting status to FAILED (grade < 10)`);
+                    }
+                }
+            }
+        }
+    });
+
+    // Before enrollment creation - validate no duplicate enrollments
+    this.before('CREATE', Enrollments, async (req: any) => {
+        const studentId = req.data.student_ID;
+        const courseId = req.data.course_ID;
+        
+        if (studentId && courseId) {
+            // Check for duplicate enrollment
+            const { SELECT } = cds.ql;
+            const existingEnrollment = await SELECT.one.from(Enrollments)
+                .where({ student_ID: studentId })
+                .and({ course_ID: courseId });
+            
+            if (existingEnrollment) {
+                console.log(`[AdminService] Enrollments CREATE - Duplicate enrollment detected for student ${studentId} in course ${courseId}`);
+                req.reject(400, 'This student is already enrolled in this course.');
+                return;
             }
         }
     });
@@ -146,18 +213,25 @@ export default cds.service.impl(async function(this: any) {
 
     // After enrollment update - recalculate course enrolled count if status changed
     this.after('UPDATE', Enrollments, async (data: any, req: any) => {
-        const courseId = data.course_ID;
-        console.log(`[AdminService] Enrollments UPDATE completed - Recalculating enrolled count for course ${courseId}`);
+        const courseId = req._courseId;
+        const oldStatus = req._oldStatus;
+        const newStatus = data.status;
         
-        // Count current enrollments with status ENROLLED
-        const { SELECT } = cds.ql;
-        const enrolledCount = await SELECT.from(Enrollments)
-            .where({ course_ID: courseId })
-            .and({ status: 'ENROLLED' });
-        
-        // Update the course enrolled count
-        await cds.update(Courses).set({ enrolled: enrolledCount.length }).where({ ID: courseId });
-        console.log(`[AdminService] Course ${courseId} enrolled count updated to ${enrolledCount.length}`);
+        // Only update enrolled count if status changed from or to ENROLLED
+        if (courseId && oldStatus !== newStatus && (oldStatus === 'ENROLLED' || newStatus === 'ENROLLED')) {
+            console.log(`[AdminService] Enrollments UPDATE - Status changed from ${oldStatus} to ${newStatus}, recalculating enrolled count for course ${courseId}`);
+            
+            const { SELECT } = cds.ql;
+            
+            // Count current enrollments with status ENROLLED
+            const enrolledCount = await SELECT.from(Enrollments)
+                .where({ course_ID: courseId })
+                .and({ status: 'ENROLLED' });
+            
+            // Update the course enrolled count
+            await cds.update(Courses).set({ enrolled: enrolledCount.length }).where({ ID: courseId });
+            console.log(`[AdminService] Course ${courseId} enrolled count updated to ${enrolledCount.length}`);
+        }
     });
 
     // After enrollment deletion - decrement course enrolled count
@@ -189,20 +263,26 @@ export default cds.service.impl(async function(this: any) {
  * Returns the authenticated user's email from JWT token or test headers
  */
 function getUserEmail(req: any): string | null {
-    // Priority 1: Check if user info is available from Auth0 JWT token
-    if (req.user && req.user.email) {
-        console.log('[AdminService] getUserEmail - Using Auth0 JWT email:', req.user.email);
-        return req.user.email;
-    }
-    
-    // Priority 2: Check for custom header (for testing/development)
+    // Priority 1: Check custom header (for Auth0 integration)
     if (req.headers['x-user-email']) {
-        console.log('[AdminService] getUserEmail - Using test header email:', req.headers['x-user-email']);
+        console.log('[AdminService] getUserEmail - Using X-User-Email header:', req.headers['x-user-email']);
         return req.headers['x-user-email'];
     }
     
+    // Priority 2: Check authUser (set by Auth0 middleware)
+    if (req.authUser && req.authUser.email) {
+        console.log('[AdminService] getUserEmail - Using Auth0 JWT email:', req.authUser.email);
+        return req.authUser.email;
+    }
+    
+    // Priority 3: Check req.user (may be overwritten by CDS)
+    if (req.user && req.user.email) {
+        console.log('[AdminService] getUserEmail - Using req.user email:', req.user.email);
+        return req.user.email;
+    }
+    
     // No user info available
-    console.warn('[AdminService] getUserEmail - No user email found! req.user:', JSON.stringify(req.user));
+    console.warn('[AdminService] getUserEmail - No user email found! req.authUser:', JSON.stringify(req.authUser), 'req.user:', JSON.stringify(req.user));
     console.warn('[AdminService] getUserEmail - Available headers:', Object.keys(req.headers).join(', '));
     return null;
 }
@@ -212,23 +292,32 @@ function getUserEmail(req: any): string | null {
  * Returns the authenticated user's role from JWT token or test headers
  */
 function getUserRole(req: any): string {
-    // Priority 1: Check if user info is available from Auth0 JWT token
-    if (req.user) {
-        const role = req.user['custom:role'] || req.user.role;
+    // Priority 1: Check custom header (for Auth0 integration)
+    if (req.headers['x-user-role']) {
+        console.log('[AdminService] getUserRole - Using X-User-Role header:', req.headers['x-user-role']);
+        return req.headers['x-user-role'];
+    }
+    
+    // Priority 2: Check authUser (set by Auth0 middleware)
+    if (req.authUser) {
+        const role = req.authUser['custom:role'] || req.authUser.role;
         if (role) {
             console.log('[AdminService] getUserRole - Using Auth0 JWT role:', role);
             return role;
         }
     }
     
-    // Priority 2: Check for custom header (for testing/development)
-    if (req.headers['x-user-role']) {
-        console.log('[AdminService] getUserRole - Using test header role:', req.headers['x-user-role']);
-        return req.headers['x-user-role'];
+    // Priority 3: Check req.user (may be overwritten by CDS)
+    if (req.user) {
+        const role = req.user['custom:role'] || req.user.role;
+        if (role) {
+            console.log('[AdminService] getUserRole - Using req.user role:', role);
+            return role;
+        }
     }
     
     // Default to admin if no role found (fallback for development)
     console.warn('[AdminService] getUserRole - No user role found! Defaulting to "admin"');
-    console.warn('[AdminService] getUserRole - req.user:', JSON.stringify(req.user));
+    console.warn('[AdminService] getUserRole - req.authUser:', JSON.stringify(req.authUser), 'req.user:', JSON.stringify(req.user));
     return 'admin';
 }

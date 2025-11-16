@@ -111,7 +111,9 @@ sap.ui.define([
                 console.log("Fetching from URL:", url);
                 const response = await fetch(url, {
                     headers: {
-                        "Authorization": "Bearer " + token
+                        "Authorization": "Bearer " + token,
+                        "X-User-Email": user.email,
+                        "X-User-Role": user['https://courseregistration.com/role'] || user['custom:role'] || user.role || 'instructor'
                     }
                 });
                 
@@ -158,11 +160,14 @@ sap.ui.define([
                 }
                 
                 const token = await window.AuthService.getToken();
+                const user = await window.AuthService.getUser();
                 const url = "/instructor/Courses";
                 console.log("Fetching from URL:", url);
                 const response = await fetch(url, {
                     headers: {
-                        "Authorization": "Bearer " + token
+                        "Authorization": "Bearer " + token,
+                        "X-User-Email": user.email,
+                        "X-User-Role": user['https://courseregistration.com/role'] || user['custom:role'] || user.role || 'instructor'
                     }
                 });
                 
@@ -215,11 +220,14 @@ sap.ui.define([
                 }
                 
                 const token = await window.AuthService.getToken();
+                const user = await window.AuthService.getUser();
                 const url = "/instructor/Enrollments?$expand=student,course";
                 console.log("Fetching from URL:", url);
                 const response = await fetch(url, {
                     headers: {
-                        "Authorization": "Bearer " + token
+                        "Authorization": "Bearer " + token,
+                        "X-User-Email": user.email,
+                        "X-User-Role": user['https://courseregistration.com/role'] || user['custom:role'] || user.role || 'instructor'
                     }
                 });
                 
@@ -282,66 +290,113 @@ sap.ui.define([
                 oGradeInput = aCells[6]; // Grade input is the 7th cell (index 6)
                 const sGrade = oGradeInput.getValue().trim();
                 
-                // Validate grade is not empty
-                if (!sGrade) {
-                    MessageBox.warning("Please enter a grade.");
-                    return;
-                }
-                
-                // Validate grade is a number
-                const fGrade = parseFloat(sGrade);
-                if (isNaN(fGrade)) {
-                    MessageBox.warning("Grade must be a valid number.");
-                    oGradeInput.setValueState("Error");
-                    oGradeInput.setValueStateText("Grade must be a number");
-                    return;
-                }
-                
-                // Validate grade is between 0 and 20
-                if (fGrade < 0 || fGrade > 20) {
-                    MessageBox.warning("Grade must be between 0 and 20.");
-                    oGradeInput.setValueState("Error");
-                    oGradeInput.setValueStateText("Grade must be between 0 and 20");
-                    return;
-                }
-                
                 // Clear any previous error state
                 oGradeInput.setValueState("None");
                 
-                // Determine status based on grade
-                let status;
-                if (fGrade >= 18) {
-                    status = "EXCELLENT";
-                } else if (fGrade >= 16) {
-                    status = "VERY_GOOD";
-                } else if (fGrade >= 14) {
-                    status = "GOOD";
-                } else if (fGrade >= 12) {
-                    status = "SATISFACTORY";
-                } else if (fGrade >= 10) {
-                    status = "PASSED";
+                let updateData = {};
+                
+                // Check if grade is being cleared (empty) or set
+                if (!sGrade) {
+                    // Grade is being cleared - revert to ENROLLED status
+                    updateData = {
+                        grade: null,
+                        status: "ENROLLED"
+                    };
                 } else {
-                    status = "FAILED";
+                    // Validate grade is a number
+                    const fGrade = parseFloat(sGrade);
+                    if (isNaN(fGrade)) {
+                        MessageBox.warning("Grade must be a valid number.");
+                        oGradeInput.setValueState("Error");
+                        oGradeInput.setValueStateText("Grade must be a number");
+                        return;
+                    }
+                    
+                    // Validate grade is between 0 and 20
+                    if (fGrade < 0 || fGrade > 20) {
+                        MessageBox.warning("Grade must be between 0 and 20.");
+                        oGradeInput.setValueState("Error");
+                        oGradeInput.setValueStateText("Grade must be between 0 and 20");
+                        return;
+                    }
+                    
+                    // Determine status based on grade
+                    let status;
+                    if (fGrade >= 18) {
+                        status = "EXCELLENT";
+                    } else if (fGrade >= 16) {
+                        status = "VERY_GOOD";
+                    } else if (fGrade >= 14) {
+                        status = "GOOD";
+                    } else if (fGrade >= 12) {
+                        status = "SATISFACTORY";
+                    } else if (fGrade >= 10) {
+                        status = "PASSED";
+                    } else {
+                        status = "FAILED";
+                    }
+                    
+                    updateData = {
+                        grade: fGrade,
+                        status: status
+                    };
                 }
                 
-                // Disable the button and input, show busy indicator during update
-                oButton.setEnabled(false);
-                oButton.setBusy(true);
-                oGradeInput.setEnabled(false);
+                // Build confirmation message
+                const studentName = `${oEnrollment.student?.firstName} ${oEnrollment.student?.lastName}`;
+                const courseName = oEnrollment.course?.courseName || 'Unknown Course';
                 
+                let confirmMessage = `Are you sure you want to update the grade?\n\n`;
+                confirmMessage += `Student: ${studentName}\n`;
+                confirmMessage += `Course: ${courseName}\n`;
+                confirmMessage += `Current Status: ${oEnrollment.status}\n\n`;
+                
+                if (updateData.grade === null) {
+                    confirmMessage += `Action: Clear grade\n`;
+                    confirmMessage += `New Status: ENROLLED\n\n`;
+                    confirmMessage += `⚠️ This will clear the grade and revert status to ENROLLED.\nThe student will count toward the course quota again.`;
+                } else {
+                    confirmMessage += `New Grade: ${updateData.grade}\n`;
+                    confirmMessage += `New Status: ${updateData.status}\n\n`;
+                    confirmMessage += `⚠️ This will update the student's grade and status.`;
+                }
+                
+                // Show confirmation dialog
+                MessageBox.confirm(confirmMessage, {
+                    title: "Confirm Grade Update",
+                    actions: [MessageBox.Action.OK, MessageBox.Action.CANCEL],
+                    onClose: async (sAction) => {
+                        if (sAction !== MessageBox.Action.OK) {
+                            return;
+                        }
+                        
+                        // Disable the button and input, show busy indicator during update
+                        oButton.setEnabled(false);
+                        oButton.setBusy(true);
+                        oGradeInput.setEnabled(false);
+                        
+                        await this._performGradeUpdate(oEnrollment, updateData, oButton, oGradeInput, studentName);
+                    }
+                });
+                
+            } catch (error) {
+                console.error("Failed to update grade:", error);
+                MessageBox.error(`Failed to update grade: ${error.message}`);
+            }
+        },
+        
+        _performGradeUpdate: async function(oEnrollment, updateData, oButton, oGradeInput, studentName) {
+            try {
                 const token = await window.AuthService.getToken();
-                
-                // Update enrollment grade and status using PATCH
-                const updateData = {
-                    grade: fGrade,
-                    status: status
-                };
+                const user = await window.AuthService.getUser();
                 
                 const response = await fetch(`/instructor/Enrollments(${oEnrollment.ID})`, {
                     method: "PATCH",
                     headers: {
                         "Authorization": "Bearer " + token,
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        "X-User-Email": user.email,
+                        "X-User-Role": user['https://courseregistration.com/role'] || user['custom:role'] || user.role || 'instructor'
                     },
                     body: JSON.stringify(updateData)
                 });
@@ -362,7 +417,11 @@ sap.ui.define([
                 const result = await response.json();
                 console.log("Grade updated:", result);
                 
-                MessageToast.show(`Grade ${fGrade} saved. Status updated to ${status} for ${oEnrollment.student?.firstName} ${oEnrollment.student?.lastName}`);
+                if (updateData.grade === null) {
+                    MessageToast.show(`Grade cleared. Status reverted to ENROLLED for ${studentName}`);
+                } else {
+                    MessageToast.show(`Grade ${updateData.grade} saved. Status updated to ${updateData.status} for ${studentName}`);
+                }
                 
                 // Refresh the enrollment list
                 this._refreshEnrollments();
@@ -440,14 +499,23 @@ sap.ui.define([
                 console.log("Loading instructor statistics...");
                 
                 const token = await window.AuthService.getToken();
+                const user = await window.AuthService.getUser();
                 
                 // Fetch courses and enrollments
                 const [coursesResponse, enrollmentsResponse] = await Promise.all([
                     fetch("/instructor/Courses", {
-                        headers: { "Authorization": "Bearer " + token }
+                        headers: { 
+                            "Authorization": "Bearer " + token,
+                            "X-User-Email": user.email,
+                            "X-User-Role": user['https://courseregistration.com/role'] || user['custom:role'] || user.role || 'instructor'
+                        }
                     }),
                     fetch("/instructor/Enrollments", {
-                        headers: { "Authorization": "Bearer " + token }
+                        headers: { 
+                            "Authorization": "Bearer " + token,
+                            "X-User-Email": user.email,
+                            "X-User-Role": user['https://courseregistration.com/role'] || user['custom:role'] || user.role || 'instructor'
+                        }
                     })
                 ]);
                 

@@ -45,12 +45,16 @@ sap.ui.define([], function() {
             await this._auth0.loginWithRedirect();
         },
         
-        logout: function() {
+        logout: async function() {
             if (!this._auth0) return;
-            this._auth0.logout({
-                logoutParams: {
-                    returnTo: window.location.origin + "/launchpad.html"
-                }
+            
+            // Clear local storage first
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // Then logout from Auth0
+            await this._auth0.logout({
+                returnTo: window.location.origin + "/launchpad.html"
             });
         },
         

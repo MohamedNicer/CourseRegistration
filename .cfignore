@@ -1,0 +1,16 @@
+node_modules/
+.git/
+app_old_backup/
+.vscode/
+*.log
+.env
+.env.*
+test-*.js
+get-auth0-token.md
+test-results-*.md
+deploy-btp.sh
+deploy-btp.ps1
+.db-initialized
+db.sqlite
+db.sqlite-wal
+db.sqlite-shm

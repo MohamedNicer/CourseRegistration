@@ -39,14 +39,22 @@ app/*/webapp/Component-preload.js
 
 # Backup folders
 app_old_backup/
+backups/
 
 # Database files
 db.sqlite
 db.sqlite-wal
 db.sqlite-shm
+.db-initialized
 
-# Kiro specs (optional - remove if you want to share specs)
+# IDE and tool directories
 .kiro/
-
-# Qodo agents (optional - remove if you want to share)
 .qodo/
+scripts/
+
+# Test and debug files
+test-*.js
+test-*.md
+check-*.js
+*-test-data.sql
+

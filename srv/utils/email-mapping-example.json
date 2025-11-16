@@ -1,0 +1,10 @@
+{
+  "students": {
+    "Alice.Test@university.edu": "alice.test@university.edu",
+    "BOB.TEST@university.edu": "bob.test@university.edu"
+  },
+  "instructors": {
+    "John.Instructor@university.edu": "john.instructor@university.edu",
+    "JANE.INSTRUCTOR@university.edu": "jane.instructor@university.edu"
+  }
+}

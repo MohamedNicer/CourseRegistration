@@ -10,11 +10,11 @@
   "dependencies": {
     "@cap-js/sqlite": "^2.0.4",
     "@sap/cds": "^9.4.4",
+    "@sap/cds-dk": "^9.3.0",
     "node-fetch": "^2.7.0",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
-    "@sap/cds-dk": "^9.3.0",
     "@sapui5/ts-types-esm": "^1.142.0",
     "@types/node": "^24.10.1",
     "@ui5/cli": "^4.0.34",
@@ -25,10 +25,7 @@
   "cds": {
     "requires": {
       "db": {
-        "kind": "sqlite",
-        "credentials": {
-          "url": "db.sqlite"
-        }
+        "kind": "sql"
       },
       "auth": {
         "[development]": {
@@ -46,7 +43,7 @@
     "app/instructor"
   ],
   "scripts": {
-    "start": "node build-srv.js && cds watch",
+    "start": "cds-serve",
     "dev": "npm run build:apps && node build-srv.js && cds watch",
     "build": "npm run build:srv && npm run build:apps",
     "build:srv": "node build-srv.js",

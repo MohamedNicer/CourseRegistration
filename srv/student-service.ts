@@ -1,5 +1,6 @@
 import cds from '@sap/cds';
 const { SELECT } = cds.ql;
+const { normalizeEmail } = require('./utils/email-utils');
 
 export default cds.service.impl(async function(this: any) {
     const { MyProfile, MyEnrollments, AvailableCourses, Enrollments } = this.entities;
@@ -27,22 +28,38 @@ export default cds.service.impl(async function(this: any) {
         console.log('[StudentService] Enrollments CREATE - User email:', userEmail);
         
         if (userEmail) {
-            const student = await SELECT.one.from(Students).where({ email: userEmail });
+            const student = await SELECT.one.from(Students).where(`LOWER(email) = LOWER('${userEmail}')`);
             
             if (student) {
                 console.log(`[StudentService] Enrollments CREATE - Setting student_ID to ${student.ID}`);
                 req.data.student_ID = student.ID;
                 
+                // Check for duplicate enrollment - student cannot enroll in the same course twice
+                const existingEnrollment = await SELECT.one.from(EnrollmentsDB)
+                    .where({ student_ID: student.ID })
+                    .and({ course_ID: req.data.course_ID });
+                
+                if (existingEnrollment) {
+                    console.log(`[StudentService] Enrollments CREATE - Duplicate enrollment detected for student ${student.ID} in course ${req.data.course_ID}`);
+                    req.reject(400, 'You are already enrolled in this course.');
+                    return;
+                }
+                
                 // Validate ECTS availability
                 const course = await SELECT.one.from(Courses).where({ ID: req.data.course_ID });
                 if (course) {
-                    // Get current enrollments
+                    // Get current enrollments (exclude only those that are not ENROLLED)
+                    // Count ENROLLED and all graded statuses (PASSED, FAILED, EXCELLENT, etc.)
                     const enrollments = await SELECT.from(EnrollmentsDB)
                         .where({ student_ID: student.ID })
-                        .and({ status: { in: ['ENROLLED', 'COMPLETED'] } });
+                        .and({ status: { '!=': null } });
                     
                     const ectsUsed = enrollments.reduce((sum: number, e: any) => {
-                        return sum + (e.course?.ects || 0);
+                        // Only count ECTS for enrollments that are active (ENROLLED) or graded
+                        if (e.status && e.status !== '') {
+                            return sum + (e.course?.ects || 0);
+                        }
+                        return sum;
                     }, 0);
                     
                     const ectsAvailable = student.ectsLimit - ectsUsed;
@@ -75,14 +92,24 @@ export default cds.service.impl(async function(this: any) {
     // Filter MyProfile by logged-in user's email
     this.before('READ', MyProfile, async (req: any) => {
         const userEmail = getUserEmail(req);
-        console.log('[StudentService] MyProfile READ - Filtering by email:', userEmail);
-        console.log('[StudentService] MyProfile - req.user object:', JSON.stringify(req.user, null, 2));
+        const userRole = getUserRole(req);
+        
+        console.log(`[StudentService] MyProfile READ - Request started - Email: ${userEmail}, Role: ${userRole}`);
         
         if (userEmail) {
-            req.query.where({ email: userEmail });
+            // Check if student exists in database
+            const student = await SELECT.one.from(Students).where(`LOWER(email) = LOWER('${userEmail}')`);
+            
+            if (student) {
+                console.log(`[StudentService] MyProfile - Database lookup: FOUND - Student ID: ${student.ID}, Email: ${student.email}`);
+            } else {
+                console.warn(`[StudentService] MyProfile - Database lookup: NOT FOUND - No student record with email: ${userEmail}`);
+            }
+            
+            req.query.where(`LOWER(email) = LOWER('${userEmail}')`);
             console.log('[StudentService] MyProfile - Applied filter: { email:', userEmail, '}');
         } else {
-            console.warn('[StudentService] MyProfile - No email found, query will return no results');
+            console.warn('[StudentService] MyProfile - No email found in authentication context, query will return no results');
             req.query.where({ email: 'no-user@invalid.com' }); // Ensure no data is returned
         }
     });
@@ -90,27 +117,29 @@ export default cds.service.impl(async function(this: any) {
     // Filter AvailableCourses - exclude already enrolled courses (allow cross-department enrollment)
     this.before('READ', AvailableCourses, async (req: any) => {
         const userEmail = getUserEmail(req);
-        console.log('[StudentService] AvailableCourses READ - User email:', userEmail);
+        const userRole = getUserRole(req);
+        
+        console.log(`[StudentService] AvailableCourses READ - Request started - Email: ${userEmail}, Role: ${userRole}`);
         
         if (userEmail) {
             // Get the student info
-            const student = await SELECT.one.from(Students).where({ email: userEmail });
+            const student = await SELECT.one.from(Students).where(`LOWER(email) = LOWER('${userEmail}')`);
             
             if (student) {
-                console.log(`[StudentService] AvailableCourses - Found student ID: ${student.ID}`);
+                console.log(`[StudentService] AvailableCourses - Database lookup: FOUND - Student ID: ${student.ID}, Email: ${student.email}`);
                 
-                // Get student's enrollments (ENROLLED, COMPLETED, or passed with grade > 10)
+                // Get student's enrollments
                 const allEnrollments = await SELECT.from(Enrollments)
                     .where({ student_ID: student.ID });
                 
                 // Exclude courses where:
-                // 1. Status is ENROLLED or COMPLETED
-                // 2. Student has passed (grade > 10)
+                // 1. Status is ENROLLED (currently taking)
+                // 2. Student has passed (grade >= 10) - includes PASSED, SATISFACTORY, GOOD, VERY_GOOD, EXCELLENT
                 const excludedCourseIds = allEnrollments
                     .filter((e: any) => {
-                        const isEnrolledOrCompleted = ['ENROLLED', 'COMPLETED'].includes(e.status);
-                        const hasPassed = e.grade !== null && e.grade > 10;
-                        return isEnrolledOrCompleted || hasPassed;
+                        const isEnrolled = e.status === 'ENROLLED';
+                        const hasPassed = e.grade !== null && e.grade >= 10;
+                        return isEnrolled || hasPassed;
                     })
                     .map((e: any) => e.course_ID);
                 
@@ -126,17 +155,17 @@ export default cds.service.impl(async function(this: any) {
                     console.log(`[StudentService] AvailableCourses - No filter applied, showing all courses`);
                 }
             } else {
-                console.warn(`[StudentService] AvailableCourses - No student found with email: ${userEmail}`);
+                console.warn(`[StudentService] AvailableCourses - Database lookup: NOT FOUND - No student record with email: ${userEmail}`);
                 req.query.where({ ID: -1 }); // Ensure no data is returned
             }
         } else {
-            console.warn('[StudentService] AvailableCourses - No email found, query will return no results');
+            console.warn('[StudentService] AvailableCourses - No email found in authentication context, query will return no results');
             req.query.where({ ID: -1 }); // Ensure no data is returned
         }
     });
 
     // Add department info to available courses after read
-    this.after('READ', AvailableCourses, async (results: any) => {
+    this.after('READ', AvailableCourses, async (results: any, req: any) => {
         if (!results) return results;
         
         const courses = Array.isArray(results) ? results : [results];
@@ -149,7 +178,24 @@ export default cds.service.impl(async function(this: any) {
                     course.departmentName = dept.departmentName;
                 }
             }
+            
+            // Dynamically calculate enrolled count to ensure accuracy
+            if (course.ID) {
+                const enrolledCount = await SELECT.from(EnrollmentsDB)
+                    .where({ course_ID: course.ID })
+                    .and({ status: 'ENROLLED' });
+                
+                // Update the course object with the live count
+                course.enrolled = enrolledCount.length;
+                
+                // Also update the database to keep it in sync
+                await cds.update(Courses).set({ enrolled: enrolledCount.length }).where({ ID: course.ID });
+            }
         }
+        
+        const userEmail = getUserEmail(req);
+        const count = Array.isArray(results) ? results.length : (results ? 1 : 0);
+        console.log(`[StudentService] AvailableCourses READ completed - User: ${userEmail}, Records returned: ${count}`);
         
         return results;
     });
@@ -157,22 +203,24 @@ export default cds.service.impl(async function(this: any) {
     // Filter MyEnrollments by logged-in user's student ID
     this.before('READ', MyEnrollments, async (req: any) => {
         const userEmail = getUserEmail(req);
-        console.log('[StudentService] MyEnrollments READ - User email:', userEmail);
+        const userRole = getUserRole(req);
+        
+        console.log(`[StudentService] MyEnrollments READ - Request started - Email: ${userEmail}, Role: ${userRole}`);
         
         if (userEmail) {
             // First, get the student ID from the email
-            const student = await SELECT.one.from(Students).where({ email: userEmail });
+            const student = await SELECT.one.from(Students).where(`LOWER(email) = LOWER('${userEmail}')`);
             
             if (student) {
-                console.log(`[StudentService] MyEnrollments - Found student ID: ${student.ID} for email: ${userEmail}`);
+                console.log(`[StudentService] MyEnrollments - Database lookup: FOUND - Student ID: ${student.ID}, Email: ${student.email}`);
                 req.query.where({ 'student_ID': student.ID });
                 console.log('[StudentService] MyEnrollments - Applied filter: { student_ID:', student.ID, '}');
             } else {
-                console.warn(`[StudentService] MyEnrollments - No student found with email: ${userEmail}`);
+                console.warn(`[StudentService] MyEnrollments - Database lookup: NOT FOUND - No student record with email: ${userEmail}`);
                 req.query.where({ 'student_ID': -1 }); // Ensure no data is returned
             }
         } else {
-            console.warn('[StudentService] MyEnrollments - No email found, query will return no results');
+            console.warn('[StudentService] MyEnrollments - No email found in authentication context, query will return no results');
             req.query.where({ 'student_ID': -1 }); // Ensure no data is returned
         }
     });
@@ -247,6 +295,10 @@ export default cds.service.impl(async function(this: any) {
         const userEmail = getUserEmail(req);
         const count = Array.isArray(results) ? results.length : (results ? 1 : 0);
         console.log(`[StudentService] MyProfile READ completed - User: ${userEmail}, Records returned: ${count}`);
+        
+        if (count === 0 && userEmail) {
+            console.warn(`[StudentService] MyProfile - WARNING: No records returned for authenticated user ${userEmail}. This may indicate an email mismatch between Auth0 and database.`);
+        }
     });
 
     this.after('READ', MyEnrollments, async (results: any, req: any) => {
@@ -271,6 +323,10 @@ export default cds.service.impl(async function(this: any) {
         const count = Array.isArray(results) ? results.length : (results ? 1 : 0);
         console.log(`[StudentService] MyEnrollments READ completed - User: ${userEmail}, Records returned: ${count}`);
         
+        if (count === 0 && userEmail) {
+            console.warn(`[StudentService] MyEnrollments - WARNING: No records returned for authenticated user ${userEmail}. This may indicate an email mismatch between Auth0 and database.`);
+        }
+        
         return results;
     });
 });
@@ -278,24 +334,38 @@ export default cds.service.impl(async function(this: any) {
 /**
  * Extract email from request user info
  * Returns the authenticated user's email from JWT token or test headers
+ * Email is normalized (lowercase, trimmed) for consistent comparison
  */
 function getUserEmail(req: any): string | null {
-    // Priority 1: Check if user info is available from Auth0 JWT token
-    if (req.user && req.user.email) {
-        console.log('[StudentService] getUserEmail - Using Auth0 JWT email:', req.user.email);
-        return req.user.email;
-    }
+    let email: string | null = null;
     
-    // Priority 2: Check for custom header (for testing/development)
+    // Priority 1: Check custom header (for Auth0 integration)
     if (req.headers['x-user-email']) {
-        console.log('[StudentService] getUserEmail - Using test header email:', req.headers['x-user-email']);
-        return req.headers['x-user-email'];
+        console.log('[StudentService] getUserEmail - Using X-User-Email header:', req.headers['x-user-email']);
+        email = req.headers['x-user-email'];
+    }
+    // Priority 2: Check authUser (set by Auth0 middleware)
+    else if (req.authUser && req.authUser.email) {
+        console.log('[StudentService] getUserEmail - Using Auth0 JWT email:', req.authUser.email);
+        email = req.authUser.email;
+    }
+    // Priority 3: Check req.user (may be overwritten by CDS)
+    else if (req.user && req.user.email) {
+        console.log('[StudentService] getUserEmail - Using req.user email:', req.user.email);
+        email = req.user.email;
     }
     
-    // No user info available
-    console.warn('[StudentService] getUserEmail - No user email found! req.user:', JSON.stringify(req.user));
-    console.warn('[StudentService] getUserEmail - Available headers:', Object.keys(req.headers).join(', '));
-    return null;
+    if (!email) {
+        // No user info available
+        console.warn('[StudentService] getUserEmail - No user email found! req.authUser:', JSON.stringify(req.authUser), 'req.user:', JSON.stringify(req.user));
+        console.warn('[StudentService] getUserEmail - Available headers:', Object.keys(req.headers).join(', '));
+        return null;
+    }
+    
+    // Normalize the email for consistent comparison
+    const normalizedEmail = normalizeEmail(email);
+    console.log('[StudentService] getUserEmail - Normalized email:', normalizedEmail);
+    return normalizedEmail;
 }
 
 /**
@@ -303,23 +373,32 @@ function getUserEmail(req: any): string | null {
  * Returns the authenticated user's role from JWT token or test headers
  */
 function getUserRole(req: any): string {
-    // Priority 1: Check if user info is available from Auth0 JWT token
-    if (req.user) {
-        const role = req.user['custom:role'] || req.user.role;
+    // Priority 1: Check custom header (for Auth0 integration)
+    if (req.headers['x-user-role']) {
+        console.log('[StudentService] getUserRole - Using X-User-Role header:', req.headers['x-user-role']);
+        return req.headers['x-user-role'];
+    }
+    
+    // Priority 2: Check authUser (set by Auth0 middleware)
+    if (req.authUser) {
+        const role = req.authUser['custom:role'] || req.authUser.role;
         if (role) {
             console.log('[StudentService] getUserRole - Using Auth0 JWT role:', role);
             return role;
         }
     }
     
-    // Priority 2: Check for custom header (for testing/development)
-    if (req.headers['x-user-role']) {
-        console.log('[StudentService] getUserRole - Using test header role:', req.headers['x-user-role']);
-        return req.headers['x-user-role'];
+    // Priority 3: Check req.user (may be overwritten by CDS)
+    if (req.user) {
+        const role = req.user['custom:role'] || req.user.role;
+        if (role) {
+            console.log('[StudentService] getUserRole - Using req.user role:', role);
+            return role;
+        }
     }
     
     // Default to student if no role found (fallback for development)
     console.warn('[StudentService] getUserRole - No user role found! Defaulting to "student"');
-    console.warn('[StudentService] getUserRole - req.user:', JSON.stringify(req.user));
+    console.warn('[StudentService] getUserRole - req.authUser:', JSON.stringify(req.authUser), 'req.user:', JSON.stringify(req.user));
     return 'student';
 }

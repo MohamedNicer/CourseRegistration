@@ -1,0 +1,12 @@
+applications:
+  - name: course-registration
+    memory: 512M
+    disk_quota: 1024M
+    buildpack: nodejs_buildpack
+    command: node start-btp.js
+    random-route: true
+    env:
+      NODE_ENV: production
+      CDS_REQUIRES_DB_KIND: sqlite
+      # Auth0 authentication is handled by custom middleware in srv/auth-middleware.js
+      # Do not use dummy auth - let the middleware handle JWT tokens

@@ -24,19 +24,20 @@ cds.on('bootstrap', (app) => {
                 
                 console.log('[AUTH] JWT payload:', payload);
                 
-                // Create CDS user object
-                const user = new cds.User({
+                // Create user object with all necessary properties
+                const userInfo = {
                     id: payload.sub,
                     email: payload.email,
                     name: payload.name,
                     'custom:role': payload['custom:role'] || payload.role || 'student',
                     role: payload['custom:role'] || payload.role || 'student'
-                });
+                };
                 
-                // Attach to request using CDS API
-                req.user = user;
+                // Attach user info to request in multiple ways for compatibility
+                req.user = new cds.User(userInfo);
+                req.authUser = userInfo;  // Also set authUser for service layer
                 
-                console.log('[AUTH] User authenticated:', user.email, 'Role:', user.role);
+                console.log('[AUTH] User authenticated:', userInfo.email, 'Role:', userInfo.role);
                 
             } catch (error) {
                 console.error('[AUTH] Error decoding token:', error.message);

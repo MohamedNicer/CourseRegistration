@@ -1,14 +1,14 @@
 {
   "name": "deploy",
   "dependencies": {
-    "hdb": "^0",
-    "@sap/hdi-deploy": "^5"
+    "@cap-js/sqlite": "^2.0.4",
+    "sqlite3": "^5.1.7"
   },
   "engines": {
     "node": "^22.0.0"
   },
   "scripts": {
-    "start": "node node_modules/@sap/hdi-deploy/deploy.js --use-hdb --parameter com.sap.hana.di.table/try_fast_table_migration=true",
-    "build": "npm i && npx cds build .. --for hana --production"
+    "start": "npm run build",
+    "build": "npm i && npx cds build .."
   }
 }

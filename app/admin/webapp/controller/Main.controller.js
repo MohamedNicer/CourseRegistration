@@ -9,6 +9,17 @@ sap.ui.define([
 
     return Controller.extend("admin.controller.Main", {
         
+        // Helper function to create fetch headers with auth and user info
+        _getAuthHeaders: async function() {
+            const token = await window.AuthService.getToken();
+            const user = await window.AuthService.getUser();
+            return {
+                "Authorization": "Bearer " + token,
+                "X-User-Email": user.email,
+                "X-User-Role": user['https://courseregistration.com/role'] || user['custom:role'] || user.role || 'admin'
+            };
+        },
+        
         onInit: function () {
             console.log("Admin Main Controller initialized");
             
@@ -149,9 +160,12 @@ sap.ui.define([
                 }
                 
                 const token = await window.AuthService.getToken();
+                const user = await window.AuthService.getUser();
                 const response = await fetch("/admin/Students?$expand=department", {
                     headers: {
-                        "Authorization": "Bearer " + token
+                        "Authorization": "Bearer " + token,
+                        "X-User-Email": user.email,
+                        "X-User-Role": user['https://courseregistration.com/role'] || user['custom:role'] || user.role || 'admin'
                     }
                 });
                 
@@ -199,9 +213,12 @@ sap.ui.define([
                 }
                 
                 const token = await window.AuthService.getToken();
+                const user = await window.AuthService.getUser();
                 const response = await fetch("/admin/Instructors?$expand=department", {
                     headers: {
-                        "Authorization": "Bearer " + token
+                        "Authorization": "Bearer " + token,
+                        "X-User-Email": user.email,
+                        "X-User-Role": user['https://courseregistration.com/role'] || user['custom:role'] || user.role || 'admin'
                     }
                 });
                 
@@ -247,9 +264,12 @@ sap.ui.define([
                 }
                 
                 const token = await window.AuthService.getToken();
+                const user = await window.AuthService.getUser();
                 const response = await fetch("/admin/Courses?$expand=department,instructor", {
                     headers: {
-                        "Authorization": "Bearer " + token
+                        "Authorization": "Bearer " + token,
+                        "X-User-Email": user.email,
+                        "X-User-Role": user['https://courseregistration.com/role'] || user['custom:role'] || user.role || 'admin'
                     }
                 });
                 
@@ -295,9 +315,12 @@ sap.ui.define([
                 }
                 
                 const token = await window.AuthService.getToken();
+                const user = await window.AuthService.getUser();
                 const response = await fetch("/admin/Enrollments?$expand=student,course", {
                     headers: {
-                        "Authorization": "Bearer " + token
+                        "Authorization": "Bearer " + token,
+                        "X-User-Email": user.email,
+                        "X-User-Role": user['https://courseregistration.com/role'] || user['custom:role'] || user.role || 'admin'
                     }
                 });
                 
@@ -635,11 +658,9 @@ sap.ui.define([
         
         _generateNextStudentNumber: async function() {
             try {
-                const token = await window.AuthService.getToken();
+                const headers = await this._getAuthHeaders();
                 const response = await fetch("/admin/Students?$orderby=studentNumber desc&$top=1", {
-                    headers: {
-                        "Authorization": "Bearer " + token
-                    }
+                    headers: headers
                 });
                 
                 if (!response.ok) {
@@ -722,7 +743,7 @@ sap.ui.define([
             }
             
             try {
-                const token = await window.AuthService.getToken();
+                const headers = await this._getAuthHeaders();
                 const url = data.mode === "create" ? "/admin/Students" : `/admin/Students(${data.ID})`;
                 const method = data.mode === "create" ? "POST" : "PATCH";
                 
@@ -738,7 +759,7 @@ sap.ui.define([
                 const response = await fetch(url, {
                     method: method,
                     headers: {
-                        "Authorization": "Bearer " + token,
+                        ...headers,
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify(payload)
@@ -765,9 +786,9 @@ sap.ui.define([
             
             try {
                 // Check for cascade effects
-                const token = await window.AuthService.getToken();
+                const headers = await this._getAuthHeaders();
                 const enrollmentsResponse = await fetch(`/admin/Enrollments?$filter=student_ID eq ${student.ID}&$expand=course`, {
-                    headers: { "Authorization": "Bearer " + token }
+                    headers: headers
                 });
                 
                 if (!enrollmentsResponse.ok) {
@@ -808,12 +829,10 @@ sap.ui.define([
         
         _deleteStudent: async function(studentId) {
             try {
-                const token = await window.AuthService.getToken();
+                const headers = await this._getAuthHeaders();
                 const response = await fetch(`/admin/Students(${studentId})`, {
                     method: 'DELETE',
-                    headers: {
-                        "Authorization": "Bearer " + token
-                    }
+                    headers: headers
                 });
                 
                 if (!response.ok) {
@@ -852,11 +871,9 @@ sap.ui.define([
         
         _generateNextInstructorId: async function() {
             try {
-                const token = await window.AuthService.getToken();
+                const headers = await this._getAuthHeaders();
                 const response = await fetch("/admin/Instructors?$orderby=instructorId desc&$top=1", {
-                    headers: {
-                        "Authorization": "Bearer " + token
-                    }
+                    headers: headers
                 });
                 
                 if (!response.ok) {
@@ -938,7 +955,7 @@ sap.ui.define([
             }
             
             try {
-                const token = await window.AuthService.getToken();
+                const headers = await this._getAuthHeaders();
                 const url = data.mode === "create" ? "/admin/Instructors" : `/admin/Instructors(${data.ID})`;
                 const method = data.mode === "create" ? "POST" : "PATCH";
                 
@@ -953,7 +970,7 @@ sap.ui.define([
                 const response = await fetch(url, {
                     method: method,
                     headers: {
-                        "Authorization": "Bearer " + token,
+                        ...headers,
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify(payload)
@@ -980,9 +997,9 @@ sap.ui.define([
             
             try {
                 // Check for cascade effects
-                const token = await window.AuthService.getToken();
+                const headers = await this._getAuthHeaders();
                 const coursesResponse = await fetch(`/admin/Courses?$filter=instructor_ID eq ${instructor.ID}`, {
-                    headers: { "Authorization": "Bearer " + token }
+                    headers: headers
                 });
                 
                 if (!coursesResponse.ok) {
@@ -1024,12 +1041,10 @@ sap.ui.define([
         
         _deleteInstructor: async function(instructorId) {
             try {
-                const token = await window.AuthService.getToken();
+                const headers = await this._getAuthHeaders();
                 const response = await fetch(`/admin/Instructors(${instructorId})`, {
                     method: 'DELETE',
-                    headers: {
-                        "Authorization": "Bearer " + token
-                    }
+                    headers: headers
                 });
                 
                 if (!response.ok) {
@@ -1138,13 +1153,11 @@ sap.ui.define([
         
         _generateNextCourseCode: async function(departmentId) {
             try {
-                const token = await window.AuthService.getToken();
+                const headers = await this._getAuthHeaders();
                 
                 // Get department prefix
                 const deptResponse = await fetch(`/admin/Departments(${departmentId})`, {
-                    headers: {
-                        "Authorization": "Bearer " + token
-                    }
+                    headers: headers
                 });
                 
                 if (!deptResponse.ok) {
@@ -1167,9 +1180,7 @@ sap.ui.define([
                 
                 // Get last course code for this department
                 const coursesResponse = await fetch(`/admin/Courses?$filter=department_ID eq ${departmentId}&$orderby=courseCode desc&$top=1`, {
-                    headers: {
-                        "Authorization": "Bearer " + token
-                    }
+                    headers: headers
                 });
                 
                 if (!coursesResponse.ok) {
@@ -1208,7 +1219,7 @@ sap.ui.define([
             }
             
             try {
-                const token = await window.AuthService.getToken();
+                const headers = await this._getAuthHeaders();
                 const url = data.mode === "create" ? "/admin/Courses" : `/admin/Courses(${data.ID})`;
                 const method = data.mode === "create" ? "POST" : "PATCH";
                 
@@ -1228,7 +1239,7 @@ sap.ui.define([
                 const response = await fetch(url, {
                     method: method,
                     headers: {
-                        "Authorization": "Bearer " + token,
+                        ...headers,
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify(payload)
@@ -1255,9 +1266,9 @@ sap.ui.define([
             
             try {
                 // Check for cascade effects
-                const token = await window.AuthService.getToken();
+                const headers = await this._getAuthHeaders();
                 const enrollmentsResponse = await fetch(`/admin/Enrollments?$filter=course_ID eq ${course.ID}&$expand=student`, {
-                    headers: { "Authorization": "Bearer " + token }
+                    headers: headers
                 });
                 
                 if (!enrollmentsResponse.ok) {
@@ -1309,12 +1320,10 @@ sap.ui.define([
         
         _deleteCourse: async function(courseId) {
             try {
-                const token = await window.AuthService.getToken();
+                const headers = await this._getAuthHeaders();
                 const response = await fetch(`/admin/Courses(${courseId})`, {
                     method: 'DELETE',
-                    headers: {
-                        "Authorization": "Bearer " + token
-                    }
+                    headers: headers
                 });
                 
                 if (!response.ok) {
@@ -1357,11 +1366,9 @@ sap.ui.define([
         
         _loadStudentsForEnrollment: async function() {
             try {
-                const token = await window.AuthService.getToken();
+                const headers = await this._getAuthHeaders();
                 const response = await fetch("/admin/Students?$expand=department", {
-                    headers: {
-                        "Authorization": "Bearer " + token
-                    }
+                    headers: headers
                 });
                 
                 if (!response.ok) {
@@ -1379,11 +1386,9 @@ sap.ui.define([
         
         _loadCoursesForEnrollment: async function() {
             try {
-                const token = await window.AuthService.getToken();
+                const headers = await this._getAuthHeaders();
                 const response = await fetch("/admin/Courses?$expand=department,instructor&$filter=isActive eq true", {
-                    headers: {
-                        "Authorization": "Bearer " + token
-                    }
+                    headers: headers
                 });
                 
                 if (!response.ok) {
@@ -1434,11 +1439,11 @@ sap.ui.define([
             }
             
             try {
-                const token = await window.AuthService.getToken();
+                const headers = await this._getAuthHeaders();
                 
                 // Get student details
                 const studentResponse = await fetch(`/admin/Students(${selectedKey})`, {
-                    headers: { "Authorization": "Bearer " + token }
+                    headers: headers
                 });
                 
                 if (!studentResponse.ok) {
@@ -1449,7 +1454,7 @@ sap.ui.define([
                 
                 // Get student's current enrollments to calculate used ECTS
                 const enrollmentsResponse = await fetch(`/admin/Enrollments?$filter=student_ID eq ${selectedKey} and status eq 'ENROLLED'&$expand=course`, {
-                    headers: { "Authorization": "Bearer " + token }
+                    headers: headers
                 });
                 
                 if (!enrollmentsResponse.ok) {
@@ -1491,11 +1496,11 @@ sap.ui.define([
             }
             
             try {
-                const token = await window.AuthService.getToken();
+                const headers = await this._getAuthHeaders();
                 
                 // Get course details
                 const courseResponse = await fetch(`/admin/Courses(${selectedKey})`, {
-                    headers: { "Authorization": "Bearer " + token }
+                    headers: headers
                 });
                 
                 if (!courseResponse.ok) {
@@ -1555,9 +1560,9 @@ sap.ui.define([
             const oDialogModel = this._addEnrollmentDialog.getModel("dialogModel");
             
             try {
-                const token = await window.AuthService.getToken();
+                const headers = await this._getAuthHeaders();
                 const response = await fetch(`/admin/Enrollments?$filter=student_ID eq ${studentId} and course_ID eq ${courseId}`, {
-                    headers: { "Authorization": "Bearer " + token }
+                    headers: headers
                 });
                 
                 if (!response.ok) {
@@ -1671,7 +1676,7 @@ sap.ui.define([
             }
             
             try {
-                const token = await window.AuthService.getToken();
+                const headers = await this._getAuthHeaders();
                 
                 const payload = {
                     student_ID: parseInt(data.student_ID),
@@ -1688,7 +1693,7 @@ sap.ui.define([
                 const response = await fetch("/admin/Enrollments", {
                     method: "POST",
                     headers: {
-                        "Authorization": "Bearer " + token,
+                        ...headers,
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify(payload)
@@ -1773,21 +1778,63 @@ sap.ui.define([
                 }
             }
             
+            // Build confirmation message
+            let confirmMessage = `Are you sure you want to update this enrollment?\n\n`;
+            confirmMessage += `Student: ${data.studentName}\n`;
+            confirmMessage += `Course: ${data.courseName}\n`;
+            
+            if (data.grade !== null && data.grade !== undefined && data.grade !== "") {
+                const grade = parseFloat(data.grade);
+                let status;
+                if (grade >= 18) status = "EXCELLENT";
+                else if (grade >= 16) status = "VERY_GOOD";
+                else if (grade >= 14) status = "GOOD";
+                else if (grade >= 12) status = "SATISFACTORY";
+                else if (grade >= 10) status = "PASSED";
+                else status = "FAILED";
+                
+                confirmMessage += `New Grade: ${grade}\n`;
+                confirmMessage += `New Status: ${status}\n\n`;
+                confirmMessage += `⚠️ This will update the student's grade and status.`;
+            } else {
+                confirmMessage += `Action: Clear grade\n`;
+                confirmMessage += `New Status: ENROLLED\n\n`;
+                confirmMessage += `⚠️ This will clear the grade and revert status to ENROLLED.\nThe student will count toward the course quota again.`;
+            }
+            
+            // Show confirmation dialog
+            MessageBox.confirm(confirmMessage, {
+                title: "Confirm Enrollment Update",
+                actions: [MessageBox.Action.OK, MessageBox.Action.CANCEL],
+                onClose: async (sAction) => {
+                    if (sAction !== MessageBox.Action.OK) {
+                        return;
+                    }
+                    
+                    await this._performEnrollmentUpdate(data);
+                }
+            });
+        },
+        
+        _performEnrollmentUpdate: async function(data) {
             try {
-                const token = await window.AuthService.getToken();
+                const headers = await this._getAuthHeaders();
                 
                 const payload = {};
                 
-                // Only include grade if it has a value
+                // Always include grade field - set to null if empty to clear it
                 // Status will be automatically set by the backend based on the grade
                 if (data.grade !== null && data.grade !== undefined && data.grade !== "") {
                     payload.grade = parseFloat(data.grade);
+                } else {
+                    // Explicitly set grade to null to clear it and revert status to ENROLLED
+                    payload.grade = null;
                 }
                 
                 const response = await fetch(`/admin/Enrollments(${data.ID})`, {
                     method: "PATCH",
                     headers: {
-                        "Authorization": "Bearer " + token,
+                        ...headers,
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify(payload)
@@ -1844,12 +1891,10 @@ sap.ui.define([
         
         _deleteEnrollment: async function(enrollmentId) {
             try {
-                const token = await window.AuthService.getToken();
+                const headers = await this._getAuthHeaders();
                 const response = await fetch(`/admin/Enrollments(${enrollmentId})`, {
                     method: 'DELETE',
-                    headers: {
-                        "Authorization": "Bearer " + token
-                    }
+                    headers: headers
                 });
                 
                 if (!response.ok) {
@@ -1910,11 +1955,9 @@ sap.ui.define([
             }
             
             try {
-                const token = await window.AuthService.getToken();
+                const headers = await this._getAuthHeaders();
                 const response = await fetch("/admin/Departments", {
-                    headers: {
-                        "Authorization": "Bearer " + token
-                    }
+                    headers: headers
                 });
                 
                 if (!response.ok) {
@@ -1936,11 +1979,9 @@ sap.ui.define([
             }
             
             try {
-                const token = await window.AuthService.getToken();
+                const headers = await this._getAuthHeaders();
                 const response = await fetch("/admin/Instructors", {
-                    headers: {
-                        "Authorization": "Bearer " + token
-                    }
+                    headers: headers
                 });
                 
                 if (!response.ok) {
