@@ -97,16 +97,29 @@ The application comes with pre-configured sample data:
 
 ### Test Users
 
+All test users use the password: **`Test@123`**
+
 **Admin Portal:**
 - Email: `admin.test@university.edu`
+- Password: `Test@123`
 - Role: `admin`
 
 **Instructor Portal:**
 - Email: `john.instructor@university.edu`
+- Password: `Test@123`
 - Role: `instructor`
 
-**Student Portal:**
+**Student Portals:**
 - Email: `alice.test@university.edu`
+- Password: `Test@123`
+- Role: `student`
+
+- Email: `bob.test@university.edu`
+- Password: `Test@123`
+- Role: `student`
+
+- Email: `henry.test@university.edu`
+- Password: `Test@123`
 - Role: `student`
 
 ## Application URLs

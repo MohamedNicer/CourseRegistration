@@ -689,17 +689,31 @@ req.query.where({ 'course.instructor.email': instructorEmail });
 
 ### Test Users
 
-Create these users in Auth0 with the specified roles in `app_metadata`:
+Create these users in Auth0 with the specified roles in `app_metadata`.  
+All users use the password: **`Test@123`**
+
+**Admin:**
+- Email: `admin.test@university.edu`
+- Password: `Test@123`
+- Role in app_metadata: `admin`
+
+**Instructor:**
+- Email: `john.instructor@university.edu`
+- Password: `Test@123`
+- Role in app_metadata: `instructor`
 
 **Students:**
-- alice.test@university.edu (role: student)
-- bob.test@university.edu (role: student)
+- Email: `alice.test@university.edu`
+- Password: `Test@123`
+- Role in app_metadata: `student`
 
-**Instructors:**
-- john.instructor@university.edu (role: instructor)
+- Email: `bob.test@university.edu`
+- Password: `Test@123`
+- Role in app_metadata: `student`
 
-**Admins:**
-- admin.test@university.edu (role: admin)
+- Email: `henry.test@university.edu`
+- Password: `Test@123`
+- Role in app_metadata: `student`
 
 ### Development Commands
 

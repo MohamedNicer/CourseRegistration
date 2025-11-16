@@ -72,10 +72,15 @@ This system provides three role-based portals for managing university course reg
 
 ### Test Users
 
-Create users in Auth0 with these roles in `app_metadata`:
-- **Students**: alice.test@university.edu, bob.test@university.edu
-- **Instructors**: john.instructor@university.edu
-- **Admins**: admin.test@university.edu
+Create users in Auth0 with these roles in `app_metadata`.  
+All users use the password: **`Test@123`**
+
+- **Admin**: admin.test@university.edu (role: admin)
+- **Instructor**: john.instructor@university.edu (role: instructor)
+- **Students**: 
+  - alice.test@university.edu (role: student)
+  - bob.test@university.edu (role: student)
+  - henry.test@university.edu (role: student)
 
 > **💡 Tip:** See [SETUP_GUIDE.md](SETUP_GUIDE.md) for step-by-step user creation and demonstration scenarios
 
