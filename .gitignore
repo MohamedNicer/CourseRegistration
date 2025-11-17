@@ -54,3 +54,6 @@ test-*.md
 check-*.js
 *-test-data.sql
 
+# Private assessment notes
+ASSESSMENT_NOTES.md
+
