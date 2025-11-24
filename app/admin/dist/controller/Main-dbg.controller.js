@@ -1137,6 +1137,17 @@ sap.ui.define([
                 console.error("Instructors model not loaded!");
             }
             
+            // If editing and department is already selected, filter instructors
+            const departmentId = oDialogModel.getProperty("/department_ID");
+            if (departmentId) {
+                await this._filterInstructorsByDepartment(departmentId);
+            } else {
+                // Reset to show all instructors if no department selected
+                if (this._allInstructors) {
+                    this._instructorsModel.setData(this._allInstructors);
+                }
+            }
+            
             this._courseDialog.open();
         },
         
@@ -1144,10 +1155,42 @@ sap.ui.define([
             const selectedDeptId = oEvent.getParameter("selectedItem").getKey();
             const oDialogModel = this._courseDialog.getModel("dialogModel");
             
+            // Filter instructors by selected department
+            await this._filterInstructorsByDepartment(selectedDeptId);
+            
+            // Clear the instructor selection when department changes
+            oDialogModel.setProperty("/instructor_ID", null);
+            
             if (oDialogModel.getProperty("/mode") === "create") {
                 // Generate course code for the selected department
                 const courseCode = await this._generateNextCourseCode(selectedDeptId);
                 oDialogModel.setProperty("/courseCode", courseCode);
+            }
+        },
+        
+        _filterInstructorsByDepartment: async function(departmentId) {
+            try {
+                if (!departmentId) {
+                    // If no department selected, show all instructors
+                    if (this._allInstructors) {
+                        this._instructorsModel.setData(this._allInstructors);
+                    }
+                    return;
+                }
+                
+                // Filter instructors by department
+                const filteredInstructors = this._allInstructors.filter(instructor => {
+                    return instructor.department_ID === parseInt(departmentId);
+                });
+                
+                console.log(`Filtered ${filteredInstructors.length} instructors for department ${departmentId}`);
+                
+                // Update the instructors model with filtered data
+                this._instructorsModel.setData(filteredInstructors);
+                
+            } catch (error) {
+                console.error("Failed to filter instructors:", error);
+                MessageToast.show("Failed to filter instructors");
             }
         },
         
@@ -1974,13 +2017,13 @@ sap.ui.define([
         },
         
         _loadInstructorsForDropdown: async function() {
-            if (this._instructorsModel) {
+            if (this._instructorsModel && this._allInstructors) {
                 return; // Already loaded
             }
             
             try {
                 const headers = await this._getAuthHeaders();
-                const response = await fetch("/admin/Instructors", {
+                const response = await fetch("/admin/Instructors?$expand=department", {
                     headers: headers
                 });
                 
@@ -1989,7 +2032,14 @@ sap.ui.define([
                 }
                 
                 const data = await response.json();
+                
+                // Store all instructors for filtering
+                this._allInstructors = data.value;
+                
+                // Initialize the instructors model with all instructors
                 this._instructorsModel = new JSONModel(data.value);
+                
+                console.log(`Loaded ${data.value.length} instructors for dropdown`);
                 
             } catch (error) {
                 console.error("Failed to load instructors:", error);

@@ -3,8 +3,10 @@ sap.ui.define([
     "sap/ui/model/json/JSONModel",
     "sap/m/MessageToast",
     "sap/m/MessageBox",
-    "sap/ui/core/Fragment"
-], function (Controller, JSONModel, MessageToast, MessageBox, Fragment) {
+    "sap/ui/core/Fragment",
+    "sap/ui/model/Filter",
+    "sap/ui/model/FilterOperator"
+], function (Controller, JSONModel, MessageToast, MessageBox, Fragment, Filter, FilterOperator) {
     "use strict";
 
     return Controller.extend("admin.controller.Main", {
@@ -71,10 +73,35 @@ sap.ui.define([
             // Load admin profile and initial tab data
             setTimeout(() => {
                 this._loadAdminProfile();
+                this._loadDepartmentsForFilters();
                 // Load the first tab (Students) by default
                 this._loadStudents();
                 this._tabsLoaded.students = true;
             }, 500);
+        },
+        
+        _loadDepartmentsForFilters: async function() {
+            try {
+                const headers = await this._getAuthHeaders();
+                const response = await fetch("/admin/Departments", {
+                    headers: headers
+                });
+                
+                if (!response.ok) {
+                    throw new Error("Failed to load departments");
+                }
+                
+                const data = await response.json();
+                
+                // Create departments model for filters
+                if (!this._departmentsModel) {
+                    this._departmentsModel = new JSONModel(data.value);
+                    this.getView().setModel(this._departmentsModel, "departments");
+                }
+                
+            } catch (error) {
+                console.error("Failed to load departments for filters:", error);
+            }
         },
         
         onAfterRendering: function() {
@@ -1137,6 +1164,17 @@ sap.ui.define([
                 console.error("Instructors model not loaded!");
             }
             
+            // If editing and department is already selected, filter instructors
+            const departmentId = oDialogModel.getProperty("/department_ID");
+            if (departmentId) {
+                await this._filterInstructorsByDepartment(departmentId);
+            } else {
+                // Reset to show all instructors if no department selected
+                if (this._allInstructors) {
+                    this._instructorsModel.setData(this._allInstructors);
+                }
+            }
+            
             this._courseDialog.open();
         },
         
@@ -1144,10 +1182,42 @@ sap.ui.define([
             const selectedDeptId = oEvent.getParameter("selectedItem").getKey();
             const oDialogModel = this._courseDialog.getModel("dialogModel");
             
+            // Filter instructors by selected department
+            await this._filterInstructorsByDepartment(selectedDeptId);
+            
+            // Clear the instructor selection when department changes
+            oDialogModel.setProperty("/instructor_ID", null);
+            
             if (oDialogModel.getProperty("/mode") === "create") {
                 // Generate course code for the selected department
                 const courseCode = await this._generateNextCourseCode(selectedDeptId);
                 oDialogModel.setProperty("/courseCode", courseCode);
+            }
+        },
+        
+        _filterInstructorsByDepartment: async function(departmentId) {
+            try {
+                if (!departmentId) {
+                    // If no department selected, show all instructors
+                    if (this._allInstructors) {
+                        this._instructorsModel.setData(this._allInstructors);
+                    }
+                    return;
+                }
+                
+                // Filter instructors by department
+                const filteredInstructors = this._allInstructors.filter(instructor => {
+                    return instructor.department_ID === parseInt(departmentId);
+                });
+                
+                console.log(`Filtered ${filteredInstructors.length} instructors for department ${departmentId}`);
+                
+                // Update the instructors model with filtered data
+                this._instructorsModel.setData(filteredInstructors);
+                
+            } catch (error) {
+                console.error("Failed to filter instructors:", error);
+                MessageToast.show("Failed to filter instructors");
             }
         },
         
@@ -1974,13 +2044,13 @@ sap.ui.define([
         },
         
         _loadInstructorsForDropdown: async function() {
-            if (this._instructorsModel) {
+            if (this._instructorsModel && this._allInstructors) {
                 return; // Already loaded
             }
             
             try {
                 const headers = await this._getAuthHeaders();
-                const response = await fetch("/admin/Instructors", {
+                const response = await fetch("/admin/Instructors?$expand=department", {
                     headers: headers
                 });
                 
@@ -1989,12 +2059,197 @@ sap.ui.define([
                 }
                 
                 const data = await response.json();
+                
+                // Store all instructors for filtering
+                this._allInstructors = data.value;
+                
+                // Initialize the instructors model with all instructors
                 this._instructorsModel = new JSONModel(data.value);
+                
+                console.log(`Loaded ${data.value.length} instructors for dropdown`);
                 
             } catch (error) {
                 console.error("Failed to load instructors:", error);
                 MessageBox.error("Failed to load instructors");
             }
+        },
+        
+        // ==================== SEARCH & FILTER FUNCTIONS ====================
+        
+        _studentFilters: { search: "", department: "" },
+        _instructorFilters: { search: "", department: "" },
+        _courseFilters: { search: "", department: "", status: "" },
+        _enrollmentFilters: { search: "", status: "" },
+        
+        onSearchStudents: function(oEvent) {
+            const sQuery = oEvent.getParameter("query") || oEvent.getParameter("newValue") || "";
+            this._studentFilters.search = sQuery;
+            this._applyStudentFilters();
+        },
+        
+        onFilterStudentsByDepartment: function(oEvent) {
+            const sKey = oEvent.getParameter("selectedItem").getKey();
+            this._studentFilters.department = sKey;
+            this._applyStudentFilters();
+        },
+        
+        _applyStudentFilters: function() {
+            const oTable = this.byId("studentTable");
+            const oBinding = oTable.getBinding("items");
+            if (!oBinding) return;
+            
+            const aFilters = [];
+            
+            // Search filter
+            if (this._studentFilters.search) {
+                aFilters.push(new Filter({
+                    filters: [
+                        new Filter("studentNumber", FilterOperator.Contains, this._studentFilters.search),
+                        new Filter("firstName", FilterOperator.Contains, this._studentFilters.search),
+                        new Filter("lastName", FilterOperator.Contains, this._studentFilters.search),
+                        new Filter("email", FilterOperator.Contains, this._studentFilters.search)
+                    ],
+                    and: false
+                }));
+            }
+            
+            // Department filter - use nested path for JSON model
+            if (this._studentFilters.department) {
+                aFilters.push(new Filter("department/ID", FilterOperator.EQ, parseInt(this._studentFilters.department)));
+            }
+            
+            oBinding.filter(aFilters);
+        },
+        
+        onSearchInstructors: function(oEvent) {
+            const sQuery = oEvent.getParameter("query") || oEvent.getParameter("newValue") || "";
+            this._instructorFilters.search = sQuery;
+            this._applyInstructorFilters();
+        },
+        
+        onFilterInstructorsByDepartment: function(oEvent) {
+            const sKey = oEvent.getParameter("selectedItem").getKey();
+            this._instructorFilters.department = sKey;
+            this._applyInstructorFilters();
+        },
+        
+        _applyInstructorFilters: function() {
+            const oTable = this.byId("instructorTable");
+            const oBinding = oTable.getBinding("items");
+            if (!oBinding) return;
+            
+            const aFilters = [];
+            
+            // Search filter
+            if (this._instructorFilters.search) {
+                aFilters.push(new Filter({
+                    filters: [
+                        new Filter("instructorId", FilterOperator.Contains, this._instructorFilters.search),
+                        new Filter("firstName", FilterOperator.Contains, this._instructorFilters.search),
+                        new Filter("lastName", FilterOperator.Contains, this._instructorFilters.search),
+                        new Filter("email", FilterOperator.Contains, this._instructorFilters.search)
+                    ],
+                    and: false
+                }));
+            }
+            
+            // Department filter - use nested path for JSON model
+            if (this._instructorFilters.department) {
+                aFilters.push(new Filter("department/ID", FilterOperator.EQ, parseInt(this._instructorFilters.department)));
+            }
+            
+            oBinding.filter(aFilters);
+        },
+        
+        onSearchCourses: function(oEvent) {
+            const sQuery = oEvent.getParameter("query") || oEvent.getParameter("newValue") || "";
+            this._courseFilters.search = sQuery;
+            this._applyCourseFilters();
+        },
+        
+        onFilterCoursesByDepartment: function(oEvent) {
+            const sKey = oEvent.getParameter("selectedItem").getKey();
+            this._courseFilters.department = sKey;
+            this._applyCourseFilters();
+        },
+        
+        onFilterCoursesByStatus: function(oEvent) {
+            const sKey = oEvent.getParameter("selectedItem").getKey();
+            this._courseFilters.status = sKey;
+            this._applyCourseFilters();
+        },
+        
+        _applyCourseFilters: function() {
+            const oTable = this.byId("courseTable");
+            const oBinding = oTable.getBinding("items");
+            if (!oBinding) return;
+            
+            const aFilters = [];
+            
+            // Search filter
+            if (this._courseFilters.search) {
+                aFilters.push(new Filter({
+                    filters: [
+                        new Filter("courseCode", FilterOperator.Contains, this._courseFilters.search),
+                        new Filter("courseName", FilterOperator.Contains, this._courseFilters.search),
+                        new Filter("description", FilterOperator.Contains, this._courseFilters.search)
+                    ],
+                    and: false
+                }));
+            }
+            
+            // Department filter - use nested path for JSON model
+            if (this._courseFilters.department) {
+                aFilters.push(new Filter("department/ID", FilterOperator.EQ, parseInt(this._courseFilters.department)));
+            }
+            
+            // Status filter
+            if (this._courseFilters.status) {
+                const bIsActive = this._courseFilters.status === "true";
+                aFilters.push(new Filter("isActive", FilterOperator.EQ, bIsActive));
+            }
+            
+            oBinding.filter(aFilters);
+        },
+        
+        onSearchEnrollments: function(oEvent) {
+            const sQuery = oEvent.getParameter("query") || oEvent.getParameter("newValue") || "";
+            this._enrollmentFilters.search = sQuery;
+            this._applyEnrollmentFilters();
+        },
+        
+        onFilterEnrollmentsByStatus: function(oEvent) {
+            const sKey = oEvent.getParameter("selectedItem").getKey();
+            this._enrollmentFilters.status = sKey;
+            this._applyEnrollmentFilters();
+        },
+        
+        _applyEnrollmentFilters: function() {
+            const oTable = this.byId("enrollmentTable");
+            const oBinding = oTable.getBinding("items");
+            if (!oBinding) return;
+            
+            const aFilters = [];
+            
+            // Search filter
+            if (this._enrollmentFilters.search) {
+                aFilters.push(new Filter({
+                    filters: [
+                        new Filter("student/firstName", FilterOperator.Contains, this._enrollmentFilters.search),
+                        new Filter("student/lastName", FilterOperator.Contains, this._enrollmentFilters.search),
+                        new Filter("course/courseCode", FilterOperator.Contains, this._enrollmentFilters.search),
+                        new Filter("course/courseName", FilterOperator.Contains, this._enrollmentFilters.search)
+                    ],
+                    and: false
+                }));
+            }
+            
+            // Status filter
+            if (this._enrollmentFilters.status) {
+                aFilters.push(new Filter("status", FilterOperator.EQ, this._enrollmentFilters.status));
+            }
+            
+            oBinding.filter(aFilters);
         },
         
         onCancelDialog: function() {

@@ -30,8 +30,10 @@
                         id="enrollmentStudent"
                         selectedKey="{dialogModel>/student_ID}"
                         required="true"
+                        forceSelection="false"
                         change=".onEnrollmentStudentChange"
                         items="{students>/}">
+                        <core:Item key="" text="Select a student..." />
                         <core:Item 
                             key="{students>ID}" 
                             text="{students>studentNumber} - {students>firstName} {students>lastName}" />
@@ -47,8 +49,10 @@
                         id="enrollmentCourse"
                         selectedKey="{dialogModel>/course_ID}"
                         required="true"
+                        forceSelection="false"
                         change=".onEnrollmentCourseChange"
                         items="{courses>/}">
+                        <core:Item key="" text="Select a course..." />
                         <core:Item 
                             key="{courses>ID}" 
                             text="{courses>courseCode} - {courses>courseName} ({courses>ects} ECTS)" />

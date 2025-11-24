@@ -38,7 +38,8 @@
                     <Input id="email" value="{dialogModel>/email}" type="Email" required="true"/>
                     
                     <Label text="Department" required="true"/>
-                    <Select id="department" selectedKey="{dialogModel>/department_ID}" required="true" items="{departments>/}">
+                    <Select id="department" selectedKey="{dialogModel>/department_ID}" required="true" forceSelection="false" items="{departments>/}">
+                        <core:Item key="" text="Select a department..." />
                         <core:Item key="{departments>ID}" text="{departments>departmentName}" />
                     </Select>
                 </f:content>

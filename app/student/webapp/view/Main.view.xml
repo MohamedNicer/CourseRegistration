@@ -70,6 +70,35 @@
                             <VBox class="sapUiSmallMargin">
                                 <Title text="Browse and Enroll in Courses" level="H2" class="sapUiSmallMarginBottom"/>
                                 
+                                <Toolbar>
+                                    <ToolbarSpacer/>
+                                    <ComboBox
+                                        width="200px"
+                                        placeholder="Filter by Department"
+                                        selectionChange=".onFilterCoursesByDepartment"
+                                        class="sapUiSmallMarginEnd"
+                                        items="{departments>/}">
+                                        <core:Item key="" text="All Departments" />
+                                        <core:Item key="{departments>ID}" text="{departments>departmentName}" />
+                                    </ComboBox>
+                                    <ComboBox
+                                        width="180px"
+                                        placeholder="Filter by Semester"
+                                        selectionChange=".onFilterCoursesBySemester"
+                                        class="sapUiSmallMarginEnd">
+                                        <core:Item key="" text="All Semesters" />
+                                        <core:Item key="Fall 2025" text="Fall 2025" />
+                                        <core:Item key="Spring 2026" text="Spring 2026" />
+                                        <core:Item key="Fall 2026" text="Fall 2026" />
+                                        <core:Item key="Spring 2027" text="Spring 2027" />
+                                    </ComboBox>
+                                    <SearchField
+                                        width="350px"
+                                        placeholder="Search courses..."
+                                        liveChange=".onSearchCourses"
+                                        class="sapUiSmallMarginEnd"/>
+                                </Toolbar>
+                                
                                 <Table
                                     id="courseTable"
                                     growing="true"
@@ -159,6 +188,25 @@
                         <IconTabFilter text="My Enrollments" key="enrollments">
                             <VBox class="sapUiSmallMargin">
                                 <Title text="My Enrolled Courses" level="H2" class="sapUiSmallMarginBottom"/>
+                                
+                                <Toolbar>
+                                    <ToolbarSpacer/>
+                                    <ComboBox
+                                        width="180px"
+                                        placeholder="Filter by Status"
+                                        selectionChange=".onFilterEnrollmentsByStatus"
+                                        class="sapUiSmallMarginEnd">
+                                        <core:Item key="" text="All Statuses" />
+                                        <core:Item key="ENROLLED" text="Enrolled" />
+                                        <core:Item key="COMPLETED" text="Completed" />
+                                        <core:Item key="DROPPED" text="Dropped" />
+                                    </ComboBox>
+                                    <SearchField
+                                        width="350px"
+                                        placeholder="Search my enrollments..."
+                                        liveChange=".onSearchEnrollments"
+                                        class="sapUiSmallMarginEnd"/>
+                                </Toolbar>
                                 
                                 <Table
                                     id="enrollmentTable"

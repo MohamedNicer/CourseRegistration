@@ -2,8 +2,10 @@ sap.ui.define([
     "sap/ui/core/mvc/Controller",
     "sap/ui/model/json/JSONModel",
     "sap/m/MessageToast",
-    "sap/m/MessageBox"
-], function (Controller, JSONModel, MessageToast, MessageBox) {
+    "sap/m/MessageBox",
+    "sap/ui/model/Filter",
+    "sap/ui/model/FilterOperator"
+], function (Controller, JSONModel, MessageToast, MessageBox, Filter, FilterOperator) {
     "use strict";
 
     /**
@@ -87,6 +89,89 @@ sap.ui.define([
             } else {
                 window.location.href = "../../launchpad.html";
             }
+        },
+        
+        // ==================== SEARCH & FILTER FUNCTIONS ====================
+        
+        _courseFilters: { search: "", semester: "" },
+        _enrollmentFilters: { search: "", status: "" },
+        
+        onSearchCourses: function(oEvent) {
+            const sQuery = oEvent.getParameter("query") || oEvent.getParameter("newValue") || "";
+            this._courseFilters.search = sQuery;
+            this._applyCourseFilters();
+        },
+        
+        onFilterCoursesBySemester: function(oEvent) {
+            const sKey = oEvent.getParameter("selectedItem").getKey();
+            this._courseFilters.semester = sKey;
+            this._applyCourseFilters();
+        },
+        
+        _applyCourseFilters: function() {
+            const oTable = this.byId("courseTable");
+            const oBinding = oTable.getBinding("items");
+            if (!oBinding) return;
+            
+            const aFilters = [];
+            
+            // Search filter
+            if (this._courseFilters.search) {
+                aFilters.push(new Filter({
+                    filters: [
+                        new Filter("courseCode", FilterOperator.Contains, this._courseFilters.search),
+                        new Filter("courseName", FilterOperator.Contains, this._courseFilters.search),
+                        new Filter("departmentName", FilterOperator.Contains, this._courseFilters.search)
+                    ],
+                    and: false
+                }));
+            }
+            
+            // Semester filter
+            if (this._courseFilters.semester) {
+                aFilters.push(new Filter("semester", FilterOperator.EQ, this._courseFilters.semester));
+            }
+            
+            oBinding.filter(aFilters);
+        },
+        
+        onSearchEnrollments: function(oEvent) {
+            const sQuery = oEvent.getParameter("query") || oEvent.getParameter("newValue") || "";
+            this._enrollmentFilters.search = sQuery;
+            this._applyEnrollmentFilters();
+        },
+        
+        onFilterEnrollmentsByStatus: function(oEvent) {
+            const sKey = oEvent.getParameter("selectedItem").getKey();
+            this._enrollmentFilters.status = sKey;
+            this._applyEnrollmentFilters();
+        },
+        
+        _applyEnrollmentFilters: function() {
+            const oTable = this.byId("enrollmentTable");
+            const oBinding = oTable.getBinding("items");
+            if (!oBinding) return;
+            
+            const aFilters = [];
+            
+            // Search filter
+            if (this._enrollmentFilters.search) {
+                aFilters.push(new Filter({
+                    filters: [
+                        new Filter("studentName", FilterOperator.Contains, this._enrollmentFilters.search),
+                        new Filter("courseCode", FilterOperator.Contains, this._enrollmentFilters.search),
+                        new Filter("courseName", FilterOperator.Contains, this._enrollmentFilters.search)
+                    ],
+                    and: false
+                }));
+            }
+            
+            // Status filter
+            if (this._enrollmentFilters.status) {
+                aFilters.push(new Filter("status", FilterOperator.EQ, this._enrollmentFilters.status));
+            }
+            
+            oBinding.filter(aFilters);
         },
 
         _loadInstructorProfile: async function () {

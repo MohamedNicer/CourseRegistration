@@ -50,8 +50,12 @@
                                 <Table
                                     id="studentTable"
                                     mode="SingleSelectMaster"
+                                    growing="true"
+                                    growingThreshold="15"
+                                    growingScrollToLoad="false"
                                     items="{
-                                        path: 'students>/students'
+                                        path: 'students>/students',
+                                        length: 10000
                                     }">
                                     <columns>
                                         <Column width="10%">
@@ -121,8 +125,12 @@
                                 <Table
                                     id="instructorTable"
                                     mode="SingleSelectMaster"
+                                    growing="true"
+                                    growingThreshold="15"
+                                    growingScrollToLoad="false"
                                     items="{
-                                        path: 'instructors>/instructors'
+                                        path: 'instructors>/instructors',
+                                        length: 10000
                                     }">
                                     <columns>
                                         <Column width="15%">
@@ -184,8 +192,12 @@
                                 <Table
                                     id="courseTable"
                                     mode="SingleSelectMaster"
+                                    growing="true"
+                                    growingThreshold="15"
+                                    growingScrollToLoad="false"
                                     items="{
-                                        path: 'courses>/courses'
+                                        path: 'courses>/courses',
+                                        length: 10000
                                     }">
                                     <columns>
                                         <Column width="8%">
@@ -265,8 +277,12 @@
                                 <Table
                                     id="enrollmentTable"
                                     mode="SingleSelectMaster"
+                                    growing="true"
+                                    growingThreshold="15"
+                                    growingScrollToLoad="false"
                                     items="{
-                                        path: 'enrollments>/enrollments'
+                                        path: 'enrollments>/enrollments',
+                                        length: 10000
                                     }">
                                     <columns>
                                         <Column width="25%">

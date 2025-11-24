@@ -2,8 +2,10 @@ sap.ui.define([
     "sap/ui/core/mvc/Controller",
     "sap/ui/model/json/JSONModel",
     "sap/m/MessageToast",
-    "sap/m/MessageBox"
-], function (Controller, JSONModel, MessageToast, MessageBox) {
+    "sap/m/MessageBox",
+    "sap/ui/model/Filter",
+    "sap/ui/model/FilterOperator"
+], function (Controller, JSONModel, MessageToast, MessageBox, Filter, FilterOperator) {
     "use strict";
 
     /**
@@ -50,10 +52,33 @@ sap.ui.define([
             // Store chart instances
             this._charts = {};
             
-            // Load student profile
+            // Load student profile and departments
             setTimeout(() => {
                 this._loadStudentProfile();
+                this._loadDepartmentsForFilters();
             }, 500);
+        },
+        
+        _loadDepartmentsForFilters: async function() {
+            try {
+                const token = await window.AuthService.getToken();
+                const user = await window.AuthService.getUser();
+                const response = await fetch("/student/Departments", {
+                    headers: {
+                        "Authorization": "Bearer " + token,
+                        "X-User-Email": user.email,
+                        "X-User-Role": user['https://courseregistration.com/role'] || user['custom:role'] || user.role || 'student'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const oDepartmentsModel = new JSONModel(data.value);
+                    this.getView().setModel(oDepartmentsModel, "departments");
+                }
+            } catch (error) {
+                console.error("Failed to load departments for filters:", error);
+            }
         },
         
         onAfterRendering: function() {
@@ -92,6 +117,107 @@ sap.ui.define([
             } else {
                 window.location.href = "../../launchpad.html";
             }
+        },
+        
+        // ==================== SEARCH & FILTER FUNCTIONS ====================
+        
+        _courseFilters: { search: "", department: "", semester: "" },
+        _enrollmentFilters: { search: "", status: "" },
+        
+        onSearchCourses: function(oEvent) {
+            const sQuery = oEvent.getParameter("query") || oEvent.getParameter("newValue") || "";
+            this._courseFilters.search = sQuery;
+            this._applyCourseFilters();
+        },
+        
+        onFilterCoursesByDepartment: function(oEvent) {
+            const sKey = oEvent.getParameter("selectedItem").getKey();
+            this._courseFilters.department = sKey;
+            this._applyCourseFilters();
+        },
+        
+        onFilterCoursesBySemester: function(oEvent) {
+            const sKey = oEvent.getParameter("selectedItem").getKey();
+            this._courseFilters.semester = sKey;
+            this._applyCourseFilters();
+        },
+        
+        _applyCourseFilters: function() {
+            const oTable = this.byId("courseTable");
+            const oBinding = oTable.getBinding("items");
+            if (!oBinding) return;
+            
+            const aFilters = [];
+            
+            // Search filter
+            if (this._courseFilters.search) {
+                aFilters.push(new Filter({
+                    filters: [
+                        new Filter("courseCode", FilterOperator.Contains, this._courseFilters.search),
+                        new Filter("courseName", FilterOperator.Contains, this._courseFilters.search),
+                        new Filter("instructorName", FilterOperator.Contains, this._courseFilters.search),
+                        new Filter("departmentName", FilterOperator.Contains, this._courseFilters.search)
+                    ],
+                    and: false
+                }));
+            }
+            
+            // Department filter - check both departmentId and departmentName
+            if (this._courseFilters.department) {
+                const deptId = parseInt(this._courseFilters.department);
+                aFilters.push(new Filter({
+                    filters: [
+                        new Filter("departmentId", FilterOperator.EQ, deptId),
+                        new Filter("department_ID", FilterOperator.EQ, deptId)
+                    ],
+                    and: false
+                }));
+            }
+            
+            // Semester filter
+            if (this._courseFilters.semester) {
+                aFilters.push(new Filter("semester", FilterOperator.EQ, this._courseFilters.semester));
+            }
+            
+            oBinding.filter(aFilters);
+        },
+        
+        onSearchEnrollments: function(oEvent) {
+            const sQuery = oEvent.getParameter("query") || oEvent.getParameter("newValue") || "";
+            this._enrollmentFilters.search = sQuery;
+            this._applyEnrollmentFilters();
+        },
+        
+        onFilterEnrollmentsByStatus: function(oEvent) {
+            const sKey = oEvent.getParameter("selectedItem").getKey();
+            this._enrollmentFilters.status = sKey;
+            this._applyEnrollmentFilters();
+        },
+        
+        _applyEnrollmentFilters: function() {
+            const oTable = this.byId("enrollmentTable");
+            const oBinding = oTable.getBinding("items");
+            if (!oBinding) return;
+            
+            const aFilters = [];
+            
+            // Search filter
+            if (this._enrollmentFilters.search) {
+                aFilters.push(new Filter({
+                    filters: [
+                        new Filter("courseCode", FilterOperator.Contains, this._enrollmentFilters.search),
+                        new Filter("courseName", FilterOperator.Contains, this._enrollmentFilters.search)
+                    ],
+                    and: false
+                }));
+            }
+            
+            // Status filter
+            if (this._enrollmentFilters.status) {
+                aFilters.push(new Filter("status", FilterOperator.EQ, this._enrollmentFilters.status));
+            }
+            
+            oBinding.filter(aFilters);
         },
 
         _loadStudentProfile: async function () {

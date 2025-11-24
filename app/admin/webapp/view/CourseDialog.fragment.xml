@@ -26,7 +26,8 @@
                 singleContainerFullSize="false">
                 <f:content>
                     <Label text="Department" required="true"/>
-                    <Select id="courseDepartment" selectedKey="{dialogModel>/department_ID}" required="true" change=".onCourseDepartmentChange" items="{departments>/}">
+                    <Select id="courseDepartment" selectedKey="{dialogModel>/department_ID}" required="true" forceSelection="false" change=".onCourseDepartmentChange" items="{departments>/}">
+                        <core:Item key="" text="Select a department..." />
                         <core:Item key="{departments>ID}" text="{departments>departmentName}" />
                     </Select>
                     
@@ -43,8 +44,9 @@
                     <Input id="ects" value="{dialogModel>/ects}" type="Number" required="true"/>
                     
                     <Label text="Semester" required="true"/>
-                    <Select id="semester" selectedKey="{dialogModel>/semester}" required="true">
+                    <Select id="semester" selectedKey="{dialogModel>/semester}" required="true" forceSelection="false">
                         <items>
+                            <core:Item key="" text="Select a semester..." />
                             <core:Item key="Fall 2025" text="Fall 2025" />
                             <core:Item key="Spring 2026" text="Spring 2026" />
                             <core:Item key="Fall 2026" text="Fall 2026" />
@@ -53,7 +55,8 @@
                     </Select>
                     
                     <Label text="Instructor" required="true"/>
-                    <Select id="instructor" selectedKey="{dialogModel>/instructor_ID}" required="true" items="{instructors>/}">
+                    <Select id="instructor" selectedKey="{dialogModel>/instructor_ID}" required="true" forceSelection="false" items="{instructors>/}">
+                        <core:Item key="" text="Select an instructor..." />
                         <core:Item key="{instructors>ID}" text="{instructors>firstName} {instructors>lastName}" />
                     </Select>
                     

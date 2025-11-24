@@ -44,6 +44,20 @@
                                 <Toolbar>
                                     <Title text="All Students" level="H3"/>
                                     <ToolbarSpacer/>
+                                    <ComboBox
+                                        width="200px"
+                                        placeholder="Filter by Department"
+                                        selectionChange=".onFilterStudentsByDepartment"
+                                        class="sapUiSmallMarginEnd"
+                                        items="{departments>/}">
+                                        <core:Item key="" text="All Departments" />
+                                        <core:Item key="{departments>ID}" text="{departments>departmentName}" />
+                                    </ComboBox>
+                                    <SearchField
+                                        width="300px"
+                                        placeholder="Search students..."
+                                        liveChange=".onSearchStudents"
+                                        class="sapUiSmallMarginEnd"/>
                                     <Button text="Add Student" icon="sap-icon://add" type="Emphasized" press=".onAddStudent"/>
                                 </Toolbar>
                                 
@@ -119,6 +133,20 @@
                                 <Toolbar>
                                     <Title text="All Instructors" level="H3"/>
                                     <ToolbarSpacer/>
+                                    <ComboBox
+                                        width="200px"
+                                        placeholder="Filter by Department"
+                                        selectionChange=".onFilterInstructorsByDepartment"
+                                        class="sapUiSmallMarginEnd"
+                                        items="{departments>/}">
+                                        <core:Item key="" text="All Departments" />
+                                        <core:Item key="{departments>ID}" text="{departments>departmentName}" />
+                                    </ComboBox>
+                                    <SearchField
+                                        width="300px"
+                                        placeholder="Search instructors..."
+                                        liveChange=".onSearchInstructors"
+                                        class="sapUiSmallMarginEnd"/>
                                     <Button text="Add Instructor" icon="sap-icon://add" type="Emphasized" press=".onAddInstructor"/>
                                 </Toolbar>
                                 
@@ -186,6 +214,29 @@
                                 <Toolbar>
                                     <Title text="All Courses" level="H3"/>
                                     <ToolbarSpacer/>
+                                    <ComboBox
+                                        width="200px"
+                                        placeholder="Filter by Department"
+                                        selectionChange=".onFilterCoursesByDepartment"
+                                        class="sapUiSmallMarginEnd"
+                                        items="{departments>/}">
+                                        <core:Item key="" text="All Departments" />
+                                        <core:Item key="{departments>ID}" text="{departments>departmentName}" />
+                                    </ComboBox>
+                                    <ComboBox
+                                        width="180px"
+                                        placeholder="Filter by Status"
+                                        selectionChange=".onFilterCoursesByStatus"
+                                        class="sapUiSmallMarginEnd">
+                                        <core:Item key="" text="All Courses" />
+                                        <core:Item key="true" text="Active Only" />
+                                        <core:Item key="false" text="Inactive Only" />
+                                    </ComboBox>
+                                    <SearchField
+                                        width="300px"
+                                        placeholder="Search courses..."
+                                        liveChange=".onSearchCourses"
+                                        class="sapUiSmallMarginEnd"/>
                                     <Button text="Add Course" icon="sap-icon://add" type="Emphasized" press=".onAddCourse"/>
                                 </Toolbar>
                                 
@@ -271,6 +322,27 @@
                                 <Toolbar>
                                     <Title text="All Enrollments" level="H3"/>
                                     <ToolbarSpacer/>
+                                    <ComboBox
+                                        width="180px"
+                                        placeholder="Filter by Status"
+                                        selectionChange=".onFilterEnrollmentsByStatus"
+                                        class="sapUiSmallMarginEnd">
+                                        <core:Item key="" text="All Statuses" />
+                                        <core:Item key="ENROLLED" text="Enrolled" />
+                                        <core:Item key="COMPLETED" text="Completed" />
+                                        <core:Item key="DROPPED" text="Dropped" />
+                                        <core:Item key="EXCELLENT" text="Excellent" />
+                                        <core:Item key="VERY_GOOD" text="Very Good" />
+                                        <core:Item key="GOOD" text="Good" />
+                                        <core:Item key="SATISFACTORY" text="Satisfactory" />
+                                        <core:Item key="PASSED" text="Passed" />
+                                        <core:Item key="FAILED" text="Failed" />
+                                    </ComboBox>
+                                    <SearchField
+                                        width="300px"
+                                        placeholder="Search enrollments..."
+                                        liveChange=".onSearchEnrollments"
+                                        class="sapUiSmallMarginEnd"/>
                                     <Button text="Add Enrollment" icon="sap-icon://add" type="Emphasized" press=".onAddEnrollment"/>
                                 </Toolbar>
                                 

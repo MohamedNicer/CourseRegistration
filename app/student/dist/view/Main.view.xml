@@ -72,8 +72,12 @@
                                 
                                 <Table
                                     id="courseTable"
+                                    growing="true"
+                                    growingThreshold="15"
+                                    growingScrollToLoad="false"
                                     items="{
-                                        path: 'courses>/courses'
+                                        path: 'courses>/courses',
+                                        length: 10000
                                     }"
                                     mode="SingleSelectMaster"
                                     selectionChange=".onCourseSelect">
@@ -158,8 +162,12 @@
                                 
                                 <Table
                                     id="enrollmentTable"
+                                    growing="true"
+                                    growingThreshold="15"
+                                    growingScrollToLoad="false"
                                     items="{
-                                        path: 'enrollments>/enrollments'
+                                        path: 'enrollments>/enrollments',
+                                        length: 10000
                                     }">
                                     <columns>
                                         <Column width="12%">
